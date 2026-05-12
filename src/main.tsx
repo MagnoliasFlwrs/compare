@@ -26,6 +26,11 @@ const AppRoutes = () => {
             element: <NewsLayout />,
             errorElement: <ErrorPage />,
         },
+        {
+            path: '/brands',
+            element: <p>brands</p>,
+            errorElement: <ErrorPage />,
+        },
         ...(canAccessUsersAdmin(user)
             ? [
                   {
