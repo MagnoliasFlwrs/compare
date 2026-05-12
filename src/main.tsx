@@ -10,6 +10,7 @@ import ErrorPage from "./routes/ErrorPage";
 import MainLayout from "./routes/MainLayout";
 import UsersAdminLayout from "./routes/UsersAdminLayout";
 import NewsLayout from "./routes/NewsLayout";
+import BrandsLayout from "./routes/BrandsLayout";
 
 
 const AppRoutes = () => {
@@ -22,13 +23,18 @@ const AppRoutes = () => {
             element: <p>index</p>,
         },
         {
-            path: '/news',
+            path: 'news',
             element: <NewsLayout />,
             errorElement: <ErrorPage />,
         },
         {
-            path: '/brands',
-            element: <p>brands</p>,
+            path: 'brands/:brandName',
+            element: <BrandsLayout />,
+            errorElement: <ErrorPage />,
+        },
+        {
+            path: 'brands',
+            element: <BrandsLayout />,
             errorElement: <ErrorPage />,
         },
         ...(canAccessUsersAdmin(user)

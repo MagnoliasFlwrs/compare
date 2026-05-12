@@ -11,6 +11,14 @@ export const authEndpoints = {
     usersSelf: '/users/self',
 } as const;
 
+/** Ответ POST `/files` (multipart, поле `file`) */
+export interface UploadedFile {
+    id: string;
+    name: string;
+    mimeType: string;
+    size: number;
+}
+
 export const axiosInstanceAuth = axios.create();
 const axiosInstanceAll = axios.create();
 
@@ -105,6 +113,15 @@ axiosInstanceAll.interceptors.response.use(
         return Promise.reject(error);
     },
 );
+
+export async function uploadFile(file: File): Promise<UploadedFile> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await axiosInstanceAll.post<UploadedFile>(`${baseAuthUrl}/files`, formData, {
+        headers: { accept: 'application/json' },
+    });
+    return res.data;
+}
 
 export { axiosInstanceAll };
 

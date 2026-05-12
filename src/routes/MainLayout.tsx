@@ -118,6 +118,7 @@ const MainLayout = () => {
                         <Link to="/manage-users">Пользователи</Link>
                     ) : null}
                     <Link to="/news">Новости</Link>
+                    <Link to="/brands">Бренды</Link>
                 </div>
                 <Dropdown
                     menu={{ items: menuItems, onClick: onMenuClick }}
