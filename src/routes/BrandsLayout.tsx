@@ -75,7 +75,7 @@ const BrandsLayout = () => {
     }, [isAdmin, brandName, navigate]);
 
     useEffect(() => {
-        void getBrands().catch(() => {
+         getBrands().catch(() => {
             message.error('Не удалось загрузить бренды');
         });
     }, []);
@@ -204,6 +204,9 @@ const BrandsLayout = () => {
             title: 'Действия',
             key: 'actions',
             width: 180,
+            onCell: () => ({
+                onClick: (e) => e.stopPropagation(),
+            }),
             render: (_, record) => (
                 <Space>
                     <Button type="link"  onClick={() => openEdit(record)}>
@@ -251,6 +254,10 @@ const BrandsLayout = () => {
                         columns={adminColumns}
                         dataSource={brands}
                         loading={loading}
+                        onRow={(record) => ({
+                            onClick: () => navigate(`/brands/${encodeURIComponent(record.id)}`),
+                            style: { cursor: 'pointer' },
+                        })}
                         pagination={{
                             current: meta?.page ?? brandsObj.page,
                             pageSize: meta?.limit ?? brandsObj.limit,
@@ -259,7 +266,7 @@ const BrandsLayout = () => {
                             pageSizeOptions: [10, 20, 50],
                             showTotal: (t) => `Всего: ${t}`,
                             onChange: (p, ps) => {
-                                void getBrands({ page: p, limit: ps }).catch(() => {
+                                 getBrands({ page: p, limit: ps }).catch(() => {
                                     message.error('Не удалось загрузить бренды');
                                 });
                             },

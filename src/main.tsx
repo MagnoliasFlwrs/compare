@@ -11,6 +11,8 @@ import MainLayout from "./routes/MainLayout";
 import UsersAdminLayout from "./routes/UsersAdminLayout";
 import NewsLayout from "./routes/NewsLayout";
 import BrandsLayout from "./routes/BrandsLayout";
+import BrandPage from "./components/brands/BrandPage";
+import GenerationsLayout from "./routes/GenerationsLayout";
 
 
 const AppRoutes = () => {
@@ -28,8 +30,13 @@ const AppRoutes = () => {
             errorElement: <ErrorPage />,
         },
         {
-            path: 'brands/:brandName',
-            element: <BrandsLayout />,
+            path: 'brands/:id/:modelId',
+            element: <GenerationsLayout />,
+            errorElement: <ErrorPage />,
+        },
+        {
+            path: 'brands/:id',
+            element: <BrandPage />,
             errorElement: <ErrorPage />,
         },
         {

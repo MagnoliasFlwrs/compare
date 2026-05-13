@@ -1,9 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AppstoreOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, ConfigProvider, Flex, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
 import type { ColumnsType } from 'antd/es/table';
+import axios from 'axios';
 import { useUsersAdminStore, type UsersAdminRow } from '../stores/usersAdminStore';
+import { useBrandsStore } from '../stores/brandsStore';
+
+function extractServerError(e: unknown, fallback: string): string {
+    if (axios.isAxiosError(e)) {
+        const data = e.response?.data as unknown;
+        if (data && typeof data === 'object') {
+            const obj = data as Record<string, unknown>;
+            const msg = obj.message ?? obj.error ?? obj.detail;
+            if (typeof msg === 'string' && msg.trim()) return msg;
+            if (Array.isArray(msg) && msg.length) return msg.join(', ');
+        }
+        if (typeof data === 'string' && data.trim()) return data;
+        if (e.response?.status) return `${fallback} (HTTP ${e.response.status})`;
+    }
+    return fallback;
+}
 
 const UsersAdminLayout = () => {
     const { message } = App.useApp();
@@ -18,6 +35,10 @@ const UsersAdminLayout = () => {
     const deleteUser = useUsersAdminStore((s) => s.deleteUser);
     const assignUserBrands = useUsersAdminStore((s) => s.assignUserBrands);
 
+    const brands = useBrandsStore((s) => s.brands);
+    const brandsLoading = useBrandsStore((s) => s.loading);
+    const getBrands = useBrandsStore((s) => s.getBrands);
+
     const [addOpen, setAddOpen] = useState(false);
     const [addSubmitting, setAddSubmitting] = useState(false);
     const [form] = Form.useForm<{ username: string; password: string }>();
@@ -30,7 +51,19 @@ const UsersAdminLayout = () => {
         void fetchUsers().catch(() => {
             message.error('Не удалось загрузить пользователей');
         });
+        void getBrands({ page: 1, limit: 500 }).catch(() => {
+            message.error('Не удалось загрузить бренды');
+        });
     }, []);
+
+    const brandOptions = useMemo(
+        () =>
+            brands.map((b) => ({
+                value: b.id,
+                label: b.name,
+            })),
+        [brands],
+    );
 
     const columns: ColumnsType<UsersAdminRow> = [
         {
@@ -90,8 +123,8 @@ const UsersAdminLayout = () => {
             message.success('Бренды назначены');
             setBrandsUser(null);
             brandsForm.resetFields();
-        } catch {
-            message.error('Не удалось назначить бренды');
+        } catch (e) {
+            message.error(extractServerError(e, 'Не удалось назначить бренды'));
         } finally {
             setBrandsSubmitting(false);
         }
@@ -157,14 +190,17 @@ const UsersAdminLayout = () => {
             >
                 <Form form={brandsForm} layout="vertical" onFinish={onBrandsSubmit}>
                     <Form.Item
-                        label="ID брендов"
+                        label="Бренды"
                         name="brandIds"
-                        rules={[{ required: true, message: 'Добавьте ID брендов' }]}
+                        rules={[{ required: true, message: 'Выберите бренды' }]}
                     >
                         <Select
-                            mode="tags"
-                            tokenSeparators={[',', ' ', ';']}
-                            placeholder="UUID бренда, Enter — следующий"
+                            mode="multiple"
+                            showSearch
+                            optionFilterProp="label"
+                            placeholder="Бренд"
+                            options={brandOptions}
+                            loading={brandsLoading}
                             style={{ width: '100%' }}
                         />
                     </Form.Item>
