@@ -235,7 +235,7 @@ const BrandsLayout = () => {
             ),
         },
     ];
-
+    console.log(brands);
     if (isAdmin) {
         return (
             <Flex vertical gap={16}>
@@ -254,10 +254,12 @@ const BrandsLayout = () => {
                         columns={adminColumns}
                         dataSource={brands}
                         loading={loading}
-                        onRow={(record) => ({
-                            onClick: () => navigate(`/brands/${encodeURIComponent(record.id)}`),
-                            style: { cursor: 'pointer' },
-                        })}
+                        onRow={(record) => {
+                            return {
+                                onClick: () => navigate(`/brands/${record.id}`),
+                                style: { cursor: 'pointer' },
+                            }
+                        }}
                         pagination={{
                             current: meta?.page ?? brandsObj.page,
                             pageSize: meta?.limit ?? brandsObj.limit,
@@ -478,7 +480,7 @@ const BrandsLayout = () => {
                     {brands.map((brand) => (
                         <Col xs={24} sm={12} md={8} lg={6} key={brand.id}>
                             <Link
-                                to={`/brands/${encodeURIComponent(brand.name)}`}
+                                to={`/brands/${brand.id}`}
                                 style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
                             >
                                 <Card

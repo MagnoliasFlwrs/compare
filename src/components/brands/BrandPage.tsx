@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import {
     App,
@@ -63,11 +63,18 @@ const BrandPage = () => {
     const [addForm] = Form.useForm<ModelFormValues>();
     const [editForm] = Form.useForm<ModelFormValues>();
 
+    const visibleModels = useMemo(
+        () => models.filter((m) => !m.isHidden),
+        [models],
+    );
+
     useEffect(() => {
         if (!brandId) return;
         getModelsByBrand(brandId).catch(() => {
             message.error('Не удалось загрузить модели');
         });
+
+        console.log(brandId)
         getBrandById(brandId).catch(() => {});
     }, [brandId]);
 
@@ -316,7 +323,7 @@ const BrandPage = () => {
                 <Typography.Text type="secondary">Загрузка…</Typography.Text>
             ) : (
                 <Row gutter={[16, 16]}>
-                    {models.map((m) => (
+                    {visibleModels.map((m) => (
                         <Col xs={24} sm={12} md={8} lg={6} key={m.id}>
                             <Card
                                 hoverable

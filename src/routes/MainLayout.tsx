@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { KeyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
-import { App, Avatar, Button, Dropdown, Form, Input, Layout, Modal, Typography } from 'antd';
+import { DownOutlined, KeyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { App, Avatar, Button, Dropdown, Form, Input, Layout, Modal, Space, Typography } from 'antd';
 import type { MenuProps } from 'antd';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { canAccessUsersAdmin, useAuth } from '../store';
+
+function isAdminUser(user: unknown): boolean {
+    if (!user || typeof user !== 'object') return false;
+    return (user as { role?: unknown }).role === 'ADMIN';
+}
 
 function displayFioFromJwt(user: unknown): string | null {
     if (!user || typeof user !== 'object') return null;
@@ -28,6 +33,24 @@ const MainLayout = () => {
     const fetchSelfUser = useAuth((s) => s.fetchSelfUser);
     const changeOwnPassword = useAuth((s) => s.changeOwnPassword);
     const showUsersAdmin = canAccessUsersAdmin(user);
+    const isAdmin = isAdminUser(user);
+
+    const referencesMenu: MenuProps['items'] = useMemo(
+        () => [
+            { key: 'countries', label: <Link to="/manage-countries">Страны</Link> },
+            { key: 'body-types', label: <Link to="/manage-body-types">Типы кузова</Link> },
+            { key: 'drive-types', label: <Link to="/manage-drive-types">Типы привода</Link> },
+            {
+                key: 'engine-types',
+                label: <Link to="/manage-engine-types">Типы двигателя</Link>,
+            },
+            {
+                key: 'transmission-types',
+                label: <Link to="/manage-transmission-types">Типы КПП</Link>,
+            },
+        ],
+        [],
+    );
     const [passwordModalOpen, setPasswordModalOpen] = useState(false);
     const [passwordSubmitting, setPasswordSubmitting] = useState(false);
     const [form] = Form.useForm<{ oldPassword: string; newPassword: string; confirm: string }>();
@@ -119,6 +142,19 @@ const MainLayout = () => {
                     ) : null}
                     <Link to="/news">Новости</Link>
                     <Link to="/brands">Бренды</Link>
+                    {isAdmin ? (
+                        <Dropdown
+                            menu={{ items: referencesMenu }}
+                            trigger={['click', 'hover']}
+                        >
+                            <a onClick={(e) => e.preventDefault()}>
+                                <Space size={4}>
+                                    Справочники
+                                    <DownOutlined style={{ fontSize: 10 }} />
+                                </Space>
+                            </a>
+                        </Dropdown>
+                    ) : null}
                 </div>
                 <Dropdown
                     menu={{ items: menuItems, onClick: onMenuClick }}

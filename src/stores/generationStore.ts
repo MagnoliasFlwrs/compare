@@ -31,6 +31,11 @@ interface GenerationsState {
     currentImagesGenerationId: string | null;
     imagesLoading: boolean;
 
+    // Кэш картинок по generationId — для грида карточек, где каждая карточка
+    // тянет свой набор изображений независимо от модалки.
+    imagesByGenerationId: Record<string, GenerationImage[]>;
+    imagesByGenerationIdLoading: Record<string, boolean>;
+
     setPage: (page: number) => void;
     setLimit: (limit: number) => void;
     clearCurrent: () => void;
@@ -51,6 +56,8 @@ interface GenerationsState {
     updateGenerationImage: (id: string, payload: UpdateGenerationImagePayload) => Promise<void>;
     deleteGenerationImage: (id: string) => Promise<void>;
     clearImages: () => void;
+
+    loadImagesForGeneration: (generationId: string) => Promise<void>;
 }
 
 export const useGenerationStore = create<GenerationsState>((set, get) => ({
@@ -73,6 +80,9 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
     },
     currentImagesGenerationId: null,
     imagesLoading: false,
+
+    imagesByGenerationId: {},
+    imagesByGenerationIdLoading: {},
 
     setPage: (page) =>
         set((s) => ({
@@ -208,8 +218,23 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
     clearImages: () => set({ images: [], imagesMeta: null, currentImagesGenerationId: null }),
 
     getGenerationImages: async (generationId, override) => {
+        const prevId = get().currentImagesGenerationId;
         const imagesObj = { ...get().imagesObj, ...override };
-        set({ imagesObj, currentImagesGenerationId: generationId, imagesLoading: true });
+
+        // При смене генерации обнуляем массив, чтобы модалка не показывала чужие изображения,
+        // пока летит сетевой запрос.
+        if (prevId !== generationId) {
+            set({
+                imagesObj,
+                currentImagesGenerationId: generationId,
+                imagesLoading: true,
+                images: [],
+                imagesMeta: null,
+            });
+        } else {
+            set({ imagesObj, currentImagesGenerationId: generationId, imagesLoading: true });
+        }
+
         const queryString = qs.stringify(
             { ...imagesObj, filter: { generationId } },
             { arrayFormat: 'indices', skipNulls: true },
@@ -219,6 +244,10 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
                 `${baseAuthUrl}/generation-images?${queryString}`,
                 { headers: { accept: 'application/json' } },
             );
+            // Защита от гонки: если за время запроса юзер уже открыл другую генерацию,
+            // не подменяем актуальные данные устаревшим ответом.
+            if (get().currentImagesGenerationId !== generationId) return;
+
             const body = res.data as GenerationImagesListResponse;
             const list = Array.isArray(body?.data) ? body.data : [];
             const meta = body?.meta ?? null;
@@ -233,6 +262,7 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
                 imagesLoading: false,
             });
         } catch {
+            if (get().currentImagesGenerationId !== generationId) return;
             set({ images: [], imagesMeta: null, imagesLoading: false });
             throw new Error('Не удалось загрузить изображения');
         }
@@ -299,6 +329,54 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
         } catch {
             set({ imagesLoading: false });
             throw new Error('Не удалось удалить изображение');
+        }
+    },
+
+    loadImagesForGeneration: async (generationId) => {
+        // Если уже грузим именно эту генерацию — не запускаем повторно.
+        if (get().imagesByGenerationIdLoading[generationId]) return;
+
+        set((s) => ({
+            imagesByGenerationIdLoading: {
+                ...s.imagesByGenerationIdLoading,
+                [generationId]: true,
+            },
+        }));
+
+        const queryString = qs.stringify(
+            { page: 1, limit: 100, filter: { generationId } },
+            { arrayFormat: 'indices', skipNulls: true },
+        );
+
+        try {
+            const res = await axiosInstanceAll.get(
+                `${baseAuthUrl}/generation-images?${queryString}`,
+                { headers: { accept: 'application/json' } },
+            );
+            const body = res.data as GenerationImagesListResponse;
+            const list = Array.isArray(body?.data) ? body.data : [];
+            const sorted = [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            set((s) => ({
+                imagesByGenerationId: {
+                    ...s.imagesByGenerationId,
+                    [generationId]: sorted,
+                },
+                imagesByGenerationIdLoading: {
+                    ...s.imagesByGenerationIdLoading,
+                    [generationId]: false,
+                },
+            }));
+        } catch {
+            set((s) => ({
+                imagesByGenerationId: {
+                    ...s.imagesByGenerationId,
+                    [generationId]: [],
+                },
+                imagesByGenerationIdLoading: {
+                    ...s.imagesByGenerationIdLoading,
+                    [generationId]: false,
+                },
+            }));
         }
     },
 }));

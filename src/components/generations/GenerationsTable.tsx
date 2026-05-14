@@ -1,9 +1,16 @@
 import React from 'react';
-import { DeleteOutlined, EditOutlined, PictureOutlined } from '@ant-design/icons';
-import { Button, ConfigProvider, Popconfirm, Space, Table } from 'antd';
+import {
+    DeleteOutlined,
+    EditOutlined,
+    MenuOutlined,
+    PictureOutlined,
+} from '@ant-design/icons';
+import { Button, ConfigProvider, Dropdown, Popconfirm, Space, Table, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ruRU from 'antd/locale/ru_RU';
+import { useParams } from 'react-router-dom';
 import type { Generation, GenerationsListMeta, GenerationsQuery } from '../../types/generation';
+import { getGenerationMenuItems } from './generationMenu';
 
 interface Props {
     data: Generation[];
@@ -26,6 +33,9 @@ const GenerationsTable: React.FC<Props> = ({
     onDelete,
     onOpenImages,
 }) => {
+    const { id: brandId, modelId } = useParams<{ id: string; modelId: string }>();
+    const canOpenMenu = Boolean(brandId && modelId);
+
     const columns: ColumnsType<Generation> = [
         {
             title: 'Номер',
@@ -48,23 +58,27 @@ const GenerationsTable: React.FC<Props> = ({
         {
             title: 'Действия',
             key: 'actions',
-            width: 220,
-            onCell: () => ({
-                onClick: (e) => e.stopPropagation(),
-            }),
+            width: 240,
             render: (_, record) => (
                 <Space>
-                    <Button
-                        type="link"
-                        aria-label="Изображения"
-                        title="Изображения"
-                        onClick={() => onOpenImages(record)}
-                    >
-                        <PictureOutlined />
-                    </Button>
-                    <Button type="link" onClick={() => onEdit(record)}>
-                        <EditOutlined />
-                    </Button>
+                    <Tooltip title="Изображения">
+                        <Button
+                            type="link"
+                            aria-label="Изображения"
+                            onClick={() => onOpenImages(record)}
+                        >
+                            <PictureOutlined />
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Редактировать">
+                        <Button
+                            type="link"
+                            aria-label="Редактировать"
+                            onClick={() => onEdit(record)}
+                        >
+                            <EditOutlined />
+                        </Button>
+                    </Tooltip>
                     <Popconfirm
                         title="Удалить поколение?"
                         description={`#${record.number}`}
@@ -73,10 +87,30 @@ const GenerationsTable: React.FC<Props> = ({
                         okButtonProps={{ danger: true }}
                         onConfirm={() => onDelete(record)}
                     >
-                        <Button type="link" danger>
-                            <DeleteOutlined />
-                        </Button>
+                        <Tooltip title="Удалить">
+                            <Button type="link" danger aria-label="Удалить">
+                                <DeleteOutlined />
+                            </Button>
+                        </Tooltip>
                     </Popconfirm>
+                    {canOpenMenu ? (
+                        <Dropdown
+                            menu={{
+                                items: getGenerationMenuItems(brandId!, modelId!, record.id),
+                            }}
+                            trigger={['click']}
+                        >
+                            <Tooltip title="Разделы поколения">
+                                <Button
+                                    type="link"
+                                    aria-label="Разделы поколения"
+                                    onClick={(e) => e.preventDefault()}
+                                >
+                                    <MenuOutlined />
+                                </Button>
+                            </Tooltip>
+                        </Dropdown>
+                    ) : null}
                 </Space>
             ),
         },

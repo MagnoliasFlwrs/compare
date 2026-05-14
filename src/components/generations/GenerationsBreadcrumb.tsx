@@ -28,7 +28,7 @@ const GenerationsBreadcrumb: React.FC<Props> = ({ brandId, brandName, modelName 
             ]}
         />
         <Typography.Title level={4} style={{ margin: 0 }}>
-            Поколение: {modelName ?? 'Модель'}
+            Поколения: {modelName ?? 'Модель'}
         </Typography.Title>
     </Flex>
 );

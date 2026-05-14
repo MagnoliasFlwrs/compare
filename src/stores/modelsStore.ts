@@ -117,7 +117,13 @@ export const useModelStore = create<ModelsState>((set, get) => ({
         try {
             const res = await axiosInstanceAll.get(
                 `${baseAuthUrl}/models/${encodeURIComponent(modelId)}`,
-                { headers: { accept: 'application/json' } },
+                { 
+                    withCredentials: true,
+                    headers: {
+                        accept: 'application/json',
+                        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+                    }
+                },
             );
             const currentModel = res.data as Model;
             set({ currentModel, currentLoading: false });
@@ -153,6 +159,7 @@ export const useModelStore = create<ModelsState>((set, get) => ({
                 `${baseAuthUrl}/models/${encodeURIComponent(modelId)}`,
                 payload,
                 {
+                    withCredentials: true,
                     headers: {
                         accept: 'application/json',
                         'Content-Type': 'application/json',

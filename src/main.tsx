@@ -13,11 +13,24 @@ import NewsLayout from "./routes/NewsLayout";
 import BrandsLayout from "./routes/BrandsLayout";
 import BrandPage from "./components/brands/BrandPage";
 import GenerationsLayout from "./routes/GenerationsLayout";
+import SpecificationsLayout from "./routes/SpecificationsLayout";
+import PowertrainLayout from "./routes/PowertrainLayout";
+import TrimsLayout from "./routes/TrimsLayout";
+import ManageCountriesLayout from "./routes/ManageCountriesLayout";
+import ManageBodyTypesLayout from "./routes/ManageBodyTypesLayout";
+import ManageDriveTypesLayout from "./routes/ManageDriveTypesLayout";
+import ManageEngineTypesLayout from "./routes/ManageEngineTypesLayout";
+import ManageTransmissionTypesLayout from "./routes/ManageTransmissionTypesLayout";
 
+function isAdminUser(user: unknown): boolean {
+    if (!user || typeof user !== 'object') return false;
+    return (user as { role?: unknown }).role === 'ADMIN';
+}
 
 const AppRoutes = () => {
     const isAuth = useAuth((state) => state.isAuth);
     const user = useAuth((state) => state.user);
+    const isAdmin = isAdminUser(user);
 
     const mainChildren = [
         {
@@ -27,6 +40,21 @@ const AppRoutes = () => {
         {
             path: 'news',
             element: <NewsLayout />,
+            errorElement: <ErrorPage />,
+        },
+        {
+            path: 'brands/:id/:modelId/:generationId/trims',
+            element: <TrimsLayout />,
+            errorElement: <ErrorPage />,
+        },
+        {
+            path: 'brands/:id/:modelId/:generationId/powertrain',
+            element: <PowertrainLayout />,
+            errorElement: <ErrorPage />,
+        },
+        {
+            path: 'brands/:id/:modelId/:generationId/specifications',
+            element: <SpecificationsLayout />,
             errorElement: <ErrorPage />,
         },
         {
@@ -49,6 +77,35 @@ const AppRoutes = () => {
                   {
                       path: 'manage-users',
                       element: <UsersAdminLayout />,
+                      errorElement: <ErrorPage />,
+                  },
+              ]
+            : []),
+        ...(isAdmin
+            ? [
+                  {
+                      path: 'manage-countries',
+                      element: <ManageCountriesLayout />,
+                      errorElement: <ErrorPage />,
+                  },
+                  {
+                      path: 'manage-body-types',
+                      element: <ManageBodyTypesLayout />,
+                      errorElement: <ErrorPage />,
+                  },
+                  {
+                      path: 'manage-drive-types',
+                      element: <ManageDriveTypesLayout />,
+                      errorElement: <ErrorPage />,
+                  },
+                  {
+                      path: 'manage-engine-types',
+                      element: <ManageEngineTypesLayout />,
+                      errorElement: <ErrorPage />,
+                  },
+                  {
+                      path: 'manage-transmission-types',
+                      element: <ManageTransmissionTypesLayout />,
                       errorElement: <ErrorPage />,
                   },
               ]

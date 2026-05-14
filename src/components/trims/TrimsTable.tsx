@@ -1,0 +1,102 @@
+import React from 'react';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, ConfigProvider, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import ruRU from 'antd/locale/ru_RU';
+import type { Trim, TrimsListMeta, TrimsQuery } from '../../stores/trimsStore';
+
+interface Props {
+    data: Trim[];
+    loading: boolean;
+    meta: TrimsListMeta | null;
+    query: TrimsQuery;
+    onPageChange: (page: number, limit: number) => void;
+    onEdit: (record: Trim) => void;
+    onDelete: (record: Trim) => Promise<void>;
+}
+
+const TrimsTable: React.FC<Props> = ({
+    data,
+    loading,
+    meta,
+    query,
+    onPageChange,
+    onEdit,
+    onDelete,
+}) => {
+    const columns: ColumnsType<Trim> = [
+        {
+            title: 'Название',
+            dataIndex: 'name',
+            key: 'name',
+        },
+        {
+            title: 'Порядок',
+            dataIndex: 'order',
+            key: 'order',
+            width: 110,
+            sorter: (a, b) => (a.order ?? 0) - (b.order ?? 0),
+        },
+        {
+            title: 'Скрыта',
+            key: 'isHidden',
+            width: 100,
+            render: (_, record) =>
+                record.isHidden ? <Tag color="default">Да</Tag> : <Tag color="green">Нет</Tag>,
+        },
+        {
+            title: 'Действия',
+            key: 'actions',
+            width: 160,
+            render: (_, record) => (
+                <Space>
+                    <Tooltip title="Редактировать">
+                        <Button
+                            type="link"
+                            aria-label="Редактировать"
+                            onClick={() => onEdit(record)}
+                        >
+                            <EditOutlined />
+                        </Button>
+                    </Tooltip>
+                    <Popconfirm
+                        title="Удалить комплектацию?"
+                        description={record.name}
+                        okText="Удалить"
+                        cancelText="Отмена"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => onDelete(record)}
+                    >
+                        <Tooltip title="Удалить">
+                            <Button type="link" danger aria-label="Удалить">
+                                <DeleteOutlined />
+                            </Button>
+                        </Tooltip>
+                    </Popconfirm>
+                </Space>
+            ),
+        },
+    ];
+
+    return (
+        <ConfigProvider locale={ruRU}>
+            <Table<Trim>
+                rowKey="id"
+                columns={columns}
+                dataSource={data}
+                loading={loading}
+                pagination={{
+                    current: meta?.page ?? query.page,
+                    pageSize: meta?.limit ?? query.limit,
+                    total: meta?.itemCount ?? 0,
+                    showSizeChanger: true,
+                    pageSizeOptions: [10, 20, 50],
+                    showTotal: (t) => `Всего: ${t}`,
+                    onChange: (p, ps) => onPageChange(p, ps),
+                }}
+            />
+        </ConfigProvider>
+    );
+};
+
+export default TrimsTable;

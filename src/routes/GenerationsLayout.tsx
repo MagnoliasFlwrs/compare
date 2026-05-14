@@ -143,6 +143,9 @@ const GenerationsLayout = () => {
     };
 
     const openImages = (record: Generation) => {
+        // Сбрасываем картинки предыдущей генерации, чтобы модалка не показывала чужой набор,
+        // пока летит запрос за новым.
+        clearImages();
         setImagesGen(record);
         getGenerationImages(record.id).catch(() => {
             message.error('Не удалось загрузить изображения');
@@ -211,7 +214,7 @@ const GenerationsLayout = () => {
             message.error('Не удалось удалить поколение');
         }
     };
-
+    
     const header = (
         <GenerationsBreadcrumb
             brandId={brandId}
