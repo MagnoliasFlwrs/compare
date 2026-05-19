@@ -26,14 +26,14 @@ export interface CreateGenerationPayload {
     number: number;
     restyling: string;
     yearFrom: number;
-    yearTo: number;
+    yearTo?: number;
 }
 
 export interface UpdateGenerationPayload {
     number: number;
     restyling: string;
     yearFrom: number;
-    yearTo: number;
+    yearTo?: number;
 }
 
 export interface CloneGenerationPayload {
@@ -80,7 +80,7 @@ export type GenerationFormValues = {
     number: number;
     restyling: string;
     yearFrom: number;
-    yearTo: number;
+    yearTo?: number | null;
 };
 
 export type CloneGenerationFormValues = {

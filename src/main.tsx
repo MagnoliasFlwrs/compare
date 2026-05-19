@@ -13,6 +13,7 @@ import NewsLayout from "./routes/NewsLayout";
 import BrandsLayout from "./routes/BrandsLayout";
 import BrandPage from "./components/brands/BrandPage";
 import GenerationsLayout from "./routes/GenerationsLayout";
+import GenerationModelOptionsLayout from "./routes/GenerationModelOptionsLayout";
 import SpecificationsLayout from "./routes/SpecificationsLayout";
 import PowertrainLayout from "./routes/PowertrainLayout";
 import TrimsLayout from "./routes/TrimsLayout";
@@ -40,6 +41,11 @@ const AppRoutes = () => {
         {
             path: 'news',
             element: <NewsLayout />,
+            errorElement: <ErrorPage />,
+        },
+        {
+            path: 'brands/:id/:modelId/:generationId/characteristics',
+            element: <GenerationModelOptionsLayout />,
             errorElement: <ErrorPage />,
         },
         {

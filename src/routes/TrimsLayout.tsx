@@ -205,24 +205,24 @@ const TrimsLayout = () => {
                 />
 
                 <TrimFormModal
+                    key="trim-add"
                     title="Новая комплектация"
                     open={addOpen}
                     submitting={addSubmitting}
                     submitText="Создать"
-                    initialValues={{
-                        name: '',
-                        order: trims.length,
-                        isHidden: false,
-                    }}
+                    seedKey="add"
+                    defaultOrder={trims.length}
                     onCancel={() => setAddOpen(false)}
                     onSubmit={onAddSubmit}
                 />
 
                 <TrimFormModal
+                    key={editTrim?.id ?? 'trim-edit'}
                     title={editTrim ? `Редактирование: ${editTrim.name}` : 'Редактирование'}
                     open={!!editTrim}
                     submitting={editSubmitting}
                     submitText="Сохранить"
+                    seedKey={editTrim?.id}
                     initialValues={editInitialValues}
                     onCancel={() => setEditTrim(null)}
                     onSubmit={onEditSubmit}

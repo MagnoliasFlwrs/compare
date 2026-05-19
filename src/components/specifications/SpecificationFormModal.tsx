@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
     Button,
     Checkbox,
@@ -37,6 +37,7 @@ interface Props {
     open: boolean;
     submitting: boolean;
     submitText: string;
+    seedKey?: string;
     initialValues?: SpecificationFormValues;
     onCancel: () => void;
     onSubmit: (values: SpecificationFormValues) => Promise<void> | void;
@@ -71,11 +72,14 @@ const SpecificationFormModal: React.FC<Props> = ({
     open,
     submitting,
     submitText,
+    seedKey = 'add',
     initialValues,
     onCancel,
     onSubmit,
 }) => {
     const [form] = Form.useForm<SpecificationFormValues>();
+    const prevOpenRef = useRef(false);
+    const lastSeedKeyRef = useRef<string | null>(null);
 
     const countries = useCountriesStore((s) => s.countries);
     const countriesLoading = useCountriesStore((s) => s.loading);
@@ -86,28 +90,34 @@ const SpecificationFormModal: React.FC<Props> = ({
     const getBodyTypes = useBodyTypesStore((s) => s.getBodyTypes);
 
     useEffect(() => {
+        if (!open) {
+            prevOpenRef.current = false;
+            lastSeedKeyRef.current = null;
+            return;
+        }
+
+        const justOpened = !prevOpenRef.current;
+        const seedChanged = lastSeedKeyRef.current !== seedKey;
+        prevOpenRef.current = true;
+        lastSeedKeyRef.current = seedKey;
+
+        if (justOpened || seedChanged) {
+            form.setFieldsValue(initialValues ?? DEFAULT_VALUES);
+        }
+    }, [open, seedKey, initialValues, form]);
+
+    // Справочники грузим только при открытии модалки.
+    // loading не кладём в deps: после ошибки length остаётся 0, loading снова false —
+    // и эффект уходит в бесконечный цикл повторных запросов.
+    useEffect(() => {
         if (!open) return;
-
-        form.setFieldsValue(initialValues ?? DEFAULT_VALUES);
-
-        // Подтягиваем справочники при первом открытии модалки.
-        if (countries.length === 0 && !countriesLoading) {
+        if (countries.length === 0) {
             getCountries({ page: 1, limit: 500 }).catch(() => {});
         }
-        if (bodyTypes.length === 0 && !bodyTypesLoading) {
+        if (bodyTypes.length === 0) {
             getBodyTypes({ page: 1, limit: 500 }).catch(() => {});
         }
-    }, [
-        open,
-        initialValues,
-        form,
-        countries.length,
-        countriesLoading,
-        getCountries,
-        bodyTypes.length,
-        bodyTypesLoading,
-        getBodyTypes,
-    ]);
+    }, [open, getCountries, getBodyTypes]);
 
     const countryOptions = useMemo(
         () => countries.map((c) => ({ value: c.id, label: c.name })),
@@ -129,13 +139,13 @@ const SpecificationFormModal: React.FC<Props> = ({
             open={open}
             onCancel={handleCancel}
             footer={null}
-            destroyOnHidden
+            destroyOnClose={false}
             width={720}
         >
             <Form<SpecificationFormValues>
                 form={form}
                 layout="vertical"
-                initialValues={initialValues ?? DEFAULT_VALUES}
+                preserve
                 onFinish={async (values) => {
                     await onSubmit({
                         name: values.name.trim(),
@@ -187,10 +197,13 @@ const SpecificationFormModal: React.FC<Props> = ({
                 </Divider>
                 <Row gutter={12}>
                     <Col xs={24} sm={12}>
-                        <Form.Item label="Страна" name="countryId">
+                        <Form.Item
+                            label="Страна"
+                            name="countryId"
+                            rules={[{ required: true, message: 'Выберите страну' }]}
+                        >
                             <Select
                                 showSearch
-                                allowClear
                                 placeholder="Выберите страну"
                                 options={countryOptions}
                                 loading={countriesLoading}
@@ -202,10 +215,13 @@ const SpecificationFormModal: React.FC<Props> = ({
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={12}>
-                        <Form.Item label="Тип кузова" name="bodyTypeId">
+                        <Form.Item
+                            label="Тип кузова"
+                            name="bodyTypeId"
+                            rules={[{ required: true, message: 'Выберите тип кузова' }]}
+                        >
                             <Select
                                 showSearch
-                                allowClear
                                 placeholder="Выберите тип кузова"
                                 options={bodyTypeOptions}
                                 loading={bodyTypesLoading}

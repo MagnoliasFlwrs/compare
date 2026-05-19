@@ -129,46 +129,37 @@ export const useTrimsStore = create<TrimsState>((set, get) => ({
     },
 
     createTrim: async (payload) => {
-        set({ loading: true });
         try {
             await axiosInstanceAll.post(`${baseAuthUrl}/trims`, payload, {
                 headers: { accept: 'application/json', 'Content-Type': 'application/json' },
             });
-            set({ loading: false });
             await get().getTrims();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось создать комплектацию');
         }
     },
 
     updateTrimById: async (id, payload) => {
-        set({ loading: true });
         try {
             await axiosInstanceAll.put(`${baseAuthUrl}/trims/${encodeURIComponent(id)}`, payload, {
                 headers: { accept: 'application/json', 'Content-Type': 'application/json' },
             });
-            set({ loading: false });
             await get().getTrims();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось обновить комплектацию');
         }
     },
 
     deleteTrimById: async (id) => {
-        set({ loading: true });
         try {
             await axiosInstanceAll.delete(`${baseAuthUrl}/trims/${encodeURIComponent(id)}`, {
                 headers: { accept: '*/*' },
             });
             set((s) => ({
-                loading: false,
                 currentTrim: s.currentTrim?.id === id ? null : s.currentTrim,
             }));
             await get().getTrims();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось удалить комплектацию');
         }
     },

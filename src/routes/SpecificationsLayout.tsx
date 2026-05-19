@@ -235,19 +235,23 @@ const SpecificationsLayout = () => {
                 />
 
                 <SpecificationFormModal
+                    key="spec-add"
                     title="Новая характеристика"
                     open={addOpen}
                     submitting={addSubmitting}
                     submitText="Создать"
+                    seedKey="add"
                     onCancel={() => setAddOpen(false)}
                     onSubmit={onAddSubmit}
                 />
 
                 <SpecificationFormModal
+                    key={editSpec?.id ?? 'spec-edit'}
                     title={editSpec ? `Редактирование: ${editSpec.name}` : 'Редактирование'}
                     open={!!editSpec}
                     submitting={editSubmitting}
                     submitText="Сохранить"
+                    seedKey={editSpec?.id}
                     initialValues={editInitialValues}
                     onCancel={() => setEditSpec(null)}
                     onSubmit={onEditSubmit}

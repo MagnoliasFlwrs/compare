@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import qs from 'qs';
 import { axiosInstanceAll, baseAuthUrl } from '../store';
+import { fetchAllPages } from '../utils/paginatedFetch';
 
 export interface Powertrain {
     id: string;
@@ -46,6 +47,31 @@ export interface PowertrainsQuery {
     };
 }
 
+/** Бэк (@IsDecimal) принимает строку вида "12.5", а не JSON number. */
+function toApiDecimal(value: unknown): string {
+    if (value === null || value === undefined || value === '') return '0.0';
+    const n = typeof value === 'number' ? value : Number(value);
+    if (Number.isNaN(n)) return '0.0';
+    if (Number.isInteger(n)) return `${n}.0`;
+    return String(n);
+}
+
+type PowertrainDecimalPayload = {
+    acceleration: number | string;
+    consumption: number | string;
+};
+
+function normalizePowertrainDecimals<T extends PowertrainDecimalPayload>(payload: T): T & {
+    acceleration: string;
+    consumption: string;
+} {
+    return {
+        ...payload,
+        acceleration: toApiDecimal(payload.acceleration),
+        consumption: toApiDecimal(payload.consumption),
+    };
+}
+
 export interface CreatePowertrainPayload {
     isHidden: boolean;
     generationId: string;
@@ -58,8 +84,8 @@ export interface CreatePowertrainPayload {
     transmissionTypeId: string;
     numOfGears: number;
     driveTypeId: string;
-    acceleration: number;
-    consumption: number;
+    acceleration: number | string;
+    consumption: number | string;
     numOfSeats: number;
     note: string;
 }
@@ -75,8 +101,8 @@ export interface UpdatePowertrainPayload {
     transmissionTypeId: string;
     numOfGears: number;
     driveTypeId: string;
-    acceleration: number;
-    consumption: number;
+    acceleration: number | string;
+    consumption: number | string;
     numOfSeats: number;
     note: string;
 }
@@ -113,6 +139,8 @@ interface PowertrainState {
     getPowertrains: (
         override?: Partial<Pick<PowertrainsQuery, 'page' | 'limit' | 'filter'>>,
     ) => Promise<void>;
+    /** Все силовые агрегаты поколения (обходит лимит 100 на страницу). */
+    fetchAllForGeneration: (generationId: string) => Promise<void>;
     getPowertrainById: (id: string) => Promise<Powertrain>;
     createPowertrain: (payload: CreatePowertrainPayload) => Promise<void>;
     updatePowertrainById: (id: string, payload: UpdatePowertrainPayload) => Promise<void>;
@@ -170,53 +198,73 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
         }
     },
 
-    createPowertrain: async (payload) => {
-        set({ loading: true });
+    fetchAllForGeneration: async (generationId) => {
+        const powertrainsObj = {
+            ...get().powertrainsObj,
+            page: 1,
+            limit: 100,
+            filter: { generationId },
+        };
+        set({ powertrainsObj, loading: true });
         try {
-            await axiosInstanceAll.post(`${baseAuthUrl}/powertrains`, payload, {
-                headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+            const list = await fetchAllPages<Powertrain>(
+                `${baseAuthUrl}/powertrains`,
+                { filter: { generationId } },
+            );
+            set({
+                powertrains: list,
+                meta: null,
+                powertrainsObj,
+                loading: false,
             });
-            set({ loading: false });
+        } catch {
+            set({ powertrains: [], meta: null, loading: false });
+            throw new Error('Не удалось загрузить силовые агрегаты');
+        }
+    },
+
+    createPowertrain: async (payload) => {
+        try {
+            await axiosInstanceAll.post(
+                `${baseAuthUrl}/powertrains`,
+                normalizePowertrainDecimals(payload),
+                {
+                headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+            },
+            );
             await get().getPowertrains();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось создать силовой агрегат');
         }
     },
 
     updatePowertrainById: async (id, payload) => {
-        set({ loading: true });
         try {
             await axiosInstanceAll.put(
                 `${baseAuthUrl}/powertrains/${encodeURIComponent(id)}`,
-                payload,
+                normalizePowertrainDecimals(payload),
                 {
                     headers: { accept: 'application/json', 'Content-Type': 'application/json' },
                 },
             );
-            set({ loading: false });
             await get().getPowertrains();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось обновить силовой агрегат');
         }
     },
 
     deletePowertrainById: async (id) => {
-        set({ loading: true });
         try {
             await axiosInstanceAll.delete(
                 `${baseAuthUrl}/powertrains/${encodeURIComponent(id)}`,
                 { headers: { accept: '*/*' } },
             );
             set((s) => ({
-                loading: false,
                 currentPowertrain:
                     s.currentPowertrain?.id === id ? null : s.currentPowertrain,
             }));
             await get().getPowertrains();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось удалить силовой агрегат');
         }
     },

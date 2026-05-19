@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { Card, Col, Dropdown, Image, Row, Skeleton, Space, Typography } from 'antd';
-import { useParams } from 'react-router-dom';
+import { Card, Col, Image, Row, Skeleton, Space, Typography } from 'antd';
+import { Link, useParams } from 'react-router-dom';
 import type { Generation } from '../../types/generation';
 import { useGenerationStore } from '../../stores/generationStore';
 import { resolveImageUrl } from './utils';
-import { getGenerationMenuItems } from './generationMenu';
+import { getGenerationCharacteristicsLink } from './generationMenu';
 
 interface Props {
     generations: Generation[];
@@ -95,36 +95,27 @@ const GenerationCard: React.FC<GenerationCardProps> = ({ generation, brandId, mo
         );
     };
 
-    const canOpenMenu = Boolean(brandId && modelId);
+    const characteristicsHref =
+        brandId && modelId
+            ? getGenerationCharacteristicsLink(brandId, modelId, generation.id)
+            : null;
 
-    const body = (
-        <div style={canOpenMenu ? { cursor: 'pointer' } : undefined}>
+    return (
+        <Card cover={<div style={{ padding: 12, paddingBottom: 0 }}>{renderGallery()}</div>}>
             <Typography.Text strong>Поколение #{generation.number}</Typography.Text>
             <Typography.Paragraph style={{ marginBottom: 0 }} type="secondary">
                 Рестайлинг: {generation.restyling || '—'}
             </Typography.Paragraph>
             <Typography.Text>
-                Годы выпуска: {generation.yearFrom}–{generation.yearTo}
+                Годы выпуска: {generation.yearFrom}
+                {generation.yearTo != null ? `–${generation.yearTo}` : ''}
             </Typography.Text>
-        </div>
-    );
 
-    return (
-        <Card
-            cover={<div style={{ padding: 12, paddingBottom: 0 }}>{renderGallery()}</div>}
-        >
-            {canOpenMenu ? (
-                <Dropdown
-                    menu={{
-                        items: getGenerationMenuItems(brandId!, modelId!, generation.id),
-                    }}
-                    trigger={['click', 'hover']}
-                >
-                    {body}
-                </Dropdown>
-            ) : (
-                body
-            )}
+            {characteristicsHref ? (
+                <div style={{ marginTop: 12 }}>
+                    <Link to={characteristicsHref}>Характеристики</Link>
+                </div>
+            ) : null}
         </Card>
     );
 };

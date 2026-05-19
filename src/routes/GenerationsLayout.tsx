@@ -20,6 +20,7 @@ import GenerationFormModal from '../components/generations/GenerationFormModal';
 import GenerationCloneModal from '../components/generations/GenerationCloneModal';
 import GenerationImagesModal from '../components/generations/GenerationImagesModal';
 import GenerationImageEditModal from '../components/generations/GenerationImageEditModal';
+import CarPricesMatrixModal from '../components/carPrices/CarPricesMatrixModal';
 
 function jwtRole(user: unknown): string | undefined {
     if (!user || typeof user !== 'object') return undefined;
@@ -63,6 +64,7 @@ const GenerationsLayout = () => {
     const [cloneOpen, setCloneOpen] = useState(false);
     const [cloneSubmitting, setCloneSubmitting] = useState(false);
 
+    const [pricesGen, setPricesGen] = useState<Generation | null>(null);
     const [imagesGen, setImagesGen] = useState<Generation | null>(null);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [editImage, setEditImage] = useState<GenerationImage | null>(null);
@@ -94,7 +96,7 @@ const GenerationsLayout = () => {
                 number: values.number,
                 restyling: (values.restyling ?? '').trim(),
                 yearFrom: values.yearFrom,
-                yearTo: values.yearTo,
+                ...(values.yearTo != null ? { yearTo: values.yearTo } : {}),
             });
             message.success('Поколение создано');
             setAddOpen(false);
@@ -113,7 +115,7 @@ const GenerationsLayout = () => {
                 number: values.number,
                 restyling: (values.restyling ?? '').trim(),
                 yearFrom: values.yearFrom,
-                yearTo: values.yearTo,
+                ...(values.yearTo != null ? { yearTo: values.yearTo } : {}),
             });
             message.success('Поколение обновлено');
             setEditGen(null);
@@ -254,6 +256,7 @@ const GenerationsLayout = () => {
                     onEdit={setEditGen}
                     onDelete={onDeleteGeneration}
                     onOpenImages={openImages}
+                    onOpenPrices={setPricesGen}
                 />
 
                 <GenerationFormModal
@@ -282,6 +285,12 @@ const GenerationsLayout = () => {
                     submitText="Сохранить"
                     onCancel={() => setEditGen(null)}
                     onSubmit={onEditSubmit}
+                />
+
+                <CarPricesMatrixModal
+                    generation={pricesGen}
+                    modelName={currentModel?.name}
+                    onClose={() => setPricesGen(null)}
                 />
 
                 <GenerationImagesModal

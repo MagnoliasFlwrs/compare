@@ -16,7 +16,6 @@ const DEFAULT_VALUES: GenerationFormValues = {
     number: 0,
     restyling: '',
     yearFrom: 0,
-    yearTo: 0,
 };
 
 const GenerationFormModal: React.FC<Props> = ({
@@ -63,12 +62,12 @@ const GenerationFormModal: React.FC<Props> = ({
                 >
                     <InputNumber style={{ width: '100%' }} min={0} />
                 </Form.Item>
-                <Form.Item
-                    label="Год по"
-                    name="yearTo"
-                    rules={[{ required: true, message: 'Укажите год' }]}
-                >
-                    <InputNumber style={{ width: '100%' }} min={0} />
+                <Form.Item label="Год по" name="yearTo">
+                    <InputNumber
+                        style={{ width: '100%' }}
+                        min={0}
+                        placeholder="Не указан"
+                    />
                 </Form.Item>
                 <Form.Item style={{ marginBottom: 0 }}>
                     <Space style={{ width: '100%', justifyContent: 'flex-end' }}>

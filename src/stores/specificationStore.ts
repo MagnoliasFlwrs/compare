@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import qs from 'qs';
 import { axiosInstanceAll, baseAuthUrl } from '../store';
+import { fetchAllPages } from '../utils/paginatedFetch';
 
 export interface Specification {
     id: string;
@@ -113,6 +114,8 @@ interface SpecificationState {
     getSpecifications: (
         override?: Partial<Pick<SpecificationsQuery, 'page' | 'limit' | 'filter'>>,
     ) => Promise<void>;
+    /** Все характеристики поколения (обходит лимит 100 на страницу). */
+    fetchAllForGeneration: (generationId: string) => Promise<void>;
     getSpecificationById: (id: string) => Promise<Specification>;
     createSpecification: (payload: CreateSpecificationPayload) => Promise<void>;
     updateSpecificationById: (id: string, payload: UpdateSpecificationPayload) => Promise<void>;
@@ -170,22 +173,43 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
         }
     },
 
+    fetchAllForGeneration: async (generationId) => {
+        const specificationsObj = {
+            ...get().specificationsObj,
+            page: 1,
+            limit: 100,
+            filter: { generationId },
+        };
+        set({ specificationsObj, loading: true });
+        try {
+            const list = await fetchAllPages<Specification>(
+                `${baseAuthUrl}/specifications`,
+                { filter: { generationId } },
+            );
+            set({
+                specifications: list,
+                meta: null,
+                specificationsObj,
+                loading: false,
+            });
+        } catch {
+            set({ specifications: [], meta: null, loading: false });
+            throw new Error('Не удалось загрузить характеристики');
+        }
+    },
+
     createSpecification: async (payload) => {
-        set({ loading: true });
         try {
             await axiosInstanceAll.post(`${baseAuthUrl}/specifications`, payload, {
                 headers: { accept: 'application/json', 'Content-Type': 'application/json' },
             });
-            set({ loading: false });
             await get().getSpecifications();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось создать характеристику');
         }
     },
 
     updateSpecificationById: async (id, payload) => {
-        set({ loading: true });
         try {
             await axiosInstanceAll.put(
                 `${baseAuthUrl}/specifications/${encodeURIComponent(id)}`,
@@ -194,29 +218,24 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
                     headers: { accept: 'application/json', 'Content-Type': 'application/json' },
                 },
             );
-            set({ loading: false });
             await get().getSpecifications();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось обновить характеристику');
         }
     },
 
     deleteSpecificationById: async (id) => {
-        set({ loading: true });
         try {
             await axiosInstanceAll.delete(
                 `${baseAuthUrl}/specifications/${encodeURIComponent(id)}`,
                 { headers: { accept: '*/*' } },
             );
             set((s) => ({
-                loading: false,
                 currentSpecification:
                     s.currentSpecification?.id === id ? null : s.currentSpecification,
             }));
             await get().getSpecifications();
         } catch {
-            set({ loading: false });
             throw new Error('Не удалось удалить характеристику');
         }
     },

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Button, Checkbox, Form, InputNumber, Input, Modal, Space } from 'antd';
 
 export type TrimFormValues = {
@@ -12,6 +12,8 @@ interface Props {
     open: boolean;
     submitting: boolean;
     submitText: string;
+    seedKey?: string;
+    defaultOrder?: number;
     initialValues?: TrimFormValues;
     onCancel: () => void;
     onSubmit: (values: TrimFormValues) => Promise<void> | void;
@@ -28,17 +30,34 @@ const TrimFormModal: React.FC<Props> = ({
     open,
     submitting,
     submitText,
+    seedKey = 'add',
+    defaultOrder = 0,
     initialValues,
     onCancel,
     onSubmit,
 }) => {
     const [form] = Form.useForm<TrimFormValues>();
+    const prevOpenRef = useRef(false);
+    const lastSeedKeyRef = useRef<string | null>(null);
 
     useEffect(() => {
-        if (open) {
-            form.setFieldsValue(initialValues ?? DEFAULT_VALUES);
+        if (!open) {
+            prevOpenRef.current = false;
+            lastSeedKeyRef.current = null;
+            return;
         }
-    }, [open, initialValues, form]);
+
+        const justOpened = !prevOpenRef.current;
+        const seedChanged = lastSeedKeyRef.current !== seedKey;
+        prevOpenRef.current = true;
+        lastSeedKeyRef.current = seedKey;
+
+        if (justOpened || seedChanged) {
+            form.setFieldsValue(
+                initialValues ?? { ...DEFAULT_VALUES, order: defaultOrder },
+            );
+        }
+    }, [open, seedKey, defaultOrder, initialValues, form]);
 
     const handleCancel = () => {
         form.resetFields();
@@ -51,12 +70,12 @@ const TrimFormModal: React.FC<Props> = ({
             open={open}
             onCancel={handleCancel}
             footer={null}
-            destroyOnHidden
+            destroyOnClose={false}
         >
             <Form<TrimFormValues>
                 form={form}
                 layout="vertical"
-                initialValues={initialValues ?? DEFAULT_VALUES}
+                preserve
                 onFinish={async (values) => {
                     await onSubmit({
                         name: values.name.trim(),

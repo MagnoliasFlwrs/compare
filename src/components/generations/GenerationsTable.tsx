@@ -1,6 +1,7 @@
 import React from 'react';
 import {
     DeleteOutlined,
+    DollarOutlined,
     EditOutlined,
     MenuOutlined,
     PictureOutlined,
@@ -21,6 +22,7 @@ interface Props {
     onEdit: (record: Generation) => void;
     onDelete: (record: Generation) => Promise<void>;
     onOpenImages: (record: Generation) => void;
+    onOpenPrices: (record: Generation) => void;
 }
 
 const GenerationsTable: React.FC<Props> = ({
@@ -32,6 +34,7 @@ const GenerationsTable: React.FC<Props> = ({
     onEdit,
     onDelete,
     onOpenImages,
+    onOpenPrices,
 }) => {
     const { id: brandId, modelId } = useParams<{ id: string; modelId: string }>();
     const canOpenMenu = Boolean(brandId && modelId);
@@ -53,14 +56,24 @@ const GenerationsTable: React.FC<Props> = ({
             title: 'Годы',
             key: 'years',
             width: 140,
-            render: (_, r) => `${r.yearFrom}–${r.yearTo}`,
+            render: (_, r) =>
+                r.yearTo != null ? `${r.yearFrom}–${r.yearTo}` : String(r.yearFrom),
         },
         {
             title: 'Действия',
             key: 'actions',
-            width: 240,
+            width: 280,
             render: (_, record) => (
                 <Space>
+                    <Tooltip title="Цены">
+                        <Button
+                            type="link"
+                            aria-label="Цены"
+                            onClick={() => onOpenPrices(record)}
+                        >
+                            <DollarOutlined />
+                        </Button>
+                    </Tooltip>
                     <Tooltip title="Изображения">
                         <Button
                             type="link"

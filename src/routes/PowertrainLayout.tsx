@@ -124,6 +124,7 @@ const PowertrainLayout = () => {
             setAddOpen(false);
         } catch {
             message.error('Не удалось создать силовой агрегат');
+            throw new Error('create failed');
         } finally {
             setAddSubmitting(false);
         }
@@ -138,6 +139,7 @@ const PowertrainLayout = () => {
             setEditPt(null);
         } catch {
             message.error('Не удалось обновить силовой агрегат');
+            throw new Error('update failed');
         } finally {
             setEditSubmitting(false);
         }
@@ -247,35 +249,24 @@ const PowertrainLayout = () => {
                 />
 
                 <PowertrainFormModal
+                    key="powertrain-add"
                     title="Новый силовой агрегат"
                     open={addOpen}
                     submitting={addSubmitting}
                     submitText="Создать"
-                    initialValues={{
-                        name: '',
-                        isHidden: false,
-                        order: powertrains.length,
-                        engine: '',
-                        engineTypeId: '',
-                        enginePower: 0,
-                        transmission: '',
-                        transmissionTypeId: '',
-                        numOfGears: 0,
-                        driveTypeId: '',
-                        acceleration: 0,
-                        consumption: 0,
-                        numOfSeats: 0,
-                        note: '',
-                    }}
+                    seedKey="add"
+                    defaultOrder={powertrains.length}
                     onCancel={() => setAddOpen(false)}
                     onSubmit={onAddSubmit}
                 />
 
                 <PowertrainFormModal
+                    key={editPt?.id ?? 'powertrain-edit'}
                     title={editPt ? `Редактирование: ${editPt.name}` : 'Редактирование'}
                     open={!!editPt}
                     submitting={editSubmitting}
                     submitText="Сохранить"
+                    seedKey={editPt?.id}
                     initialValues={editInitialValues}
                     onCancel={() => setEditPt(null)}
                     onSubmit={onEditSubmit}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
     Button,
     Checkbox,
@@ -39,6 +39,9 @@ interface Props {
     open: boolean;
     submitting: boolean;
     submitText: string;
+    /** Меняется только при смене редактируемой записи — не на каждый ре-рендер родителя */
+    seedKey?: string;
+    defaultOrder?: number;
     initialValues?: PowertrainFormValues;
     onCancel: () => void;
     onSubmit: (values: PowertrainFormValues) => Promise<void> | void;
@@ -66,11 +69,15 @@ const PowertrainFormModal: React.FC<Props> = ({
     open,
     submitting,
     submitText,
+    seedKey = 'add',
+    defaultOrder = 0,
     initialValues,
     onCancel,
     onSubmit,
 }) => {
     const [form] = Form.useForm<PowertrainFormValues>();
+    const prevOpenRef = useRef(false);
+    const lastSeedKeyRef = useRef<string | null>(null);
 
     const driveTypes = useDriveTypesStore((s) => s.driveTypes);
     const driveTypesLoading = useDriveTypesStore((s) => s.loading);
@@ -84,32 +91,39 @@ const PowertrainFormModal: React.FC<Props> = ({
     const transmissionTypesLoading = useTransmissionTypesStore((s) => s.loading);
     const getTransmissionTypes = useTransmissionTypesStore((s) => s.getTransmissionTypes);
 
+    // Заполняем форму только при открытии или смене seedKey (id записи при редактировании).
+    // Не зависим от initialValues по ссылке — родитель мог бы передавать новый {} каждый рендер.
+    useEffect(() => {
+        if (!open) {
+            prevOpenRef.current = false;
+            lastSeedKeyRef.current = null;
+            return;
+        }
+
+        const justOpened = !prevOpenRef.current;
+        const seedChanged = lastSeedKeyRef.current !== seedKey;
+        prevOpenRef.current = true;
+        lastSeedKeyRef.current = seedKey;
+
+        if (justOpened || seedChanged) {
+            form.setFieldsValue(
+                initialValues ?? { ...DEFAULT_VALUES, order: defaultOrder },
+            );
+        }
+    }, [open, seedKey, defaultOrder, initialValues, form]);
+
     useEffect(() => {
         if (!open) return;
-        form.setFieldsValue(initialValues ?? DEFAULT_VALUES);
-        if (driveTypes.length === 0 && !driveTypesLoading) {
+        if (driveTypes.length === 0) {
             getDriveTypes({ page: 1, limit: 500 }).catch(() => {});
         }
-        if (engineTypes.length === 0 && !engineTypesLoading) {
+        if (engineTypes.length === 0) {
             getEngineTypes({ page: 1, limit: 500 }).catch(() => {});
         }
-        if (transmissionTypes.length === 0 && !transmissionTypesLoading) {
+        if (transmissionTypes.length === 0) {
             getTransmissionTypes({ page: 1, limit: 500 }).catch(() => {});
         }
-    }, [
-        open,
-        initialValues,
-        form,
-        driveTypes.length,
-        driveTypesLoading,
-        getDriveTypes,
-        engineTypes.length,
-        engineTypesLoading,
-        getEngineTypes,
-        transmissionTypes.length,
-        transmissionTypesLoading,
-        getTransmissionTypes,
-    ]);
+    }, [open, getDriveTypes, getEngineTypes, getTransmissionTypes]);
 
     const driveTypeOptions = useMemo(
         () => driveTypes.map((d) => ({ value: d.id, label: d.name })),
@@ -135,15 +149,15 @@ const PowertrainFormModal: React.FC<Props> = ({
             open={open}
             onCancel={handleCancel}
             footer={null}
-            destroyOnHidden
+            destroyOnClose={false}
             width={760}
         >
             <Form<PowertrainFormValues>
                 form={form}
                 layout="vertical"
-                initialValues={initialValues ?? DEFAULT_VALUES}
+                preserve
                 onFinish={async (values) => {
-                    await onSubmit({
+                    const payload: PowertrainFormValues = {
                         name: values.name.trim(),
                         isHidden: Boolean(values.isHidden),
                         order: Number(values.order ?? 0),
@@ -158,7 +172,12 @@ const PowertrainFormModal: React.FC<Props> = ({
                         consumption: Number(values.consumption ?? 0),
                         numOfSeats: Number(values.numOfSeats ?? 0),
                         note: (values.note ?? '').trim(),
-                    });
+                    };
+                    try {
+                        await onSubmit(payload);
+                    } catch {
+                        form.setFieldsValue(payload);
+                    }
                 }}
             >
                 <Row gutter={12}>
