@@ -1,36 +1,40 @@
 import React from 'react';
-import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { Button, ConfigProvider, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ruRU from 'antd/locale/ru_RU';
-import type {
-    Specification,
-    SpecificationsListMeta,
-    SpecificationsQuery,
-} from '../../stores/specificationStore';
+import type { Attribute } from '../../types/attributes';
+import type { AttributesListMeta } from '../../types/attributes';
+import {
+    ADVANTAGE_LABELS,
+    CATEGORY_LABELS,
+    TYPE_LABELS,
+} from './attributeLabels';
 
 interface Props {
-    data: Specification[];
+    data: Attribute[];
     loading: boolean;
-    meta: SpecificationsListMeta | null;
-    query: SpecificationsQuery;
+    meta: AttributesListMeta | null;
+    page: number;
+    limit: number;
     onPageChange: (page: number, limit: number) => void;
-    onEdit: (record: Specification) => void;
-    onManageAttributes: (record: Specification) => void;
-    onDelete: (record: Specification) => Promise<void>;
+    onEdit: (record: Attribute) => void;
+    onManageOptions: (record: Attribute) => void;
+    onDelete: (record: Attribute) => Promise<void>;
 }
 
-const SpecificationsTable: React.FC<Props> = ({
+const AttributesTable: React.FC<Props> = ({
     data,
     loading,
     meta,
-    query,
+    page,
+    limit,
     onPageChange,
     onEdit,
-    onManageAttributes,
+    onManageOptions,
     onDelete,
 }) => {
-    const columns: ColumnsType<Specification> = [
+    const columns: ColumnsType<Attribute> = [
         {
             title: 'Название',
             dataIndex: 'name',
@@ -38,63 +42,60 @@ const SpecificationsTable: React.FC<Props> = ({
             ellipsis: true,
         },
         {
-            title: 'Габариты, мм (Д×Ш×В)',
-            key: 'dimensions',
+            title: 'Блок',
+            dataIndex: 'category',
+            key: 'category',
             width: 180,
-            render: (_, r) => `${r.length}×${r.width}×${r.height}`,
+            render: (c: Attribute['category']) => (
+                <Tag>{CATEGORY_LABELS[c] ?? c}</Tag>
+            ),
         },
         {
-            title: 'Колёсная база',
-            dataIndex: 'wheelbase',
-            key: 'wheelbase',
-            width: 130,
+            title: 'Тип',
+            dataIndex: 'type',
+            key: 'type',
+            width: 160,
+            render: (t: Attribute['type']) => TYPE_LABELS[t] ?? t,
         },
         {
-            title: 'Клиренс',
-            dataIndex: 'clearance',
-            key: 'clearance',
+            title: 'Единица',
+            dataIndex: 'unit',
+            key: 'unit',
             width: 100,
+            render: (u: string) => u?.trim() || '—',
         },
         {
-            title: 'Бак, л',
-            dataIndex: 'tank',
-            key: 'tank',
+            title: 'Преимущество',
+            dataIndex: 'advantageType',
+            key: 'advantageType',
+            width: 150,
+            render: (a: Attribute['advantageType']) => ADVANTAGE_LABELS[a] ?? a,
+        },
+        {
+            title: 'Значений',
+            key: 'optionsCount',
             width: 90,
-        },
-        {
-            title: 'Багажник, л',
-            key: 'trunk',
-            width: 140,
-            render: (_, r) => `${r.trunkStandardVolume} / ${r.trunkMaximumVolume}`,
-        },
-        {
-            title: 'Гарантия',
-            dataIndex: 'warranty',
-            key: 'warranty',
-            ellipsis: true,
-        },
-        {
-            title: 'Скрыта',
-            key: 'isHidden',
-            width: 90,
-            render: (_, record) =>
-                record.isHidden ? <Tag color="default">Да</Tag> : <Tag color="green">Нет</Tag>,
+            align: 'center',
+            render: (_, r) =>
+                r.type === 'SELECT' ? (r.options?.length ?? 0) : '—',
         },
         {
             title: 'Действия',
             key: 'actions',
-            width: 200,
+            width: 160,
             render: (_, record) => (
                 <Space>
-                    <Tooltip title="Доп. характеристики">
-                        <Button
-                            type="link"
-                            aria-label="Доп. характеристики"
-                            onClick={() => onManageAttributes(record)}
-                        >
-                            <TagsOutlined />
-                        </Button>
-                    </Tooltip>
+                    {record.type === 'SELECT' ? (
+                        <Tooltip title="Значения">
+                            <Button
+                                type="link"
+                                aria-label="Значения"
+                                onClick={() => onManageOptions(record)}
+                            >
+                                <UnorderedListOutlined />
+                            </Button>
+                        </Tooltip>
+                    ) : null}
                     <Tooltip title="Редактировать">
                         <Button
                             type="link"
@@ -125,18 +126,17 @@ const SpecificationsTable: React.FC<Props> = ({
 
     return (
         <ConfigProvider locale={ruRU}>
-            <Table<Specification>
+            <Table<Attribute>
                 rowKey="id"
                 columns={columns}
                 dataSource={data}
                 loading={loading}
-                scroll={{ x: 1100 }}
                 pagination={{
-                    current: meta?.page ?? query.page,
-                    pageSize: meta?.limit ?? query.limit,
+                    current: meta?.page ?? page,
+                    pageSize: meta?.limit ?? limit,
                     total: meta?.itemCount ?? 0,
                     showSizeChanger: true,
-                    pageSizeOptions: [10, 20, 50],
+                    pageSizeOptions: [10, 20, 50, 100],
                     showTotal: (t) => `Всего: ${t}`,
                     onChange: (p, ps) => onPageChange(p, ps),
                 }}
@@ -145,4 +145,4 @@ const SpecificationsTable: React.FC<Props> = ({
     );
 };
 
-export default SpecificationsTable;
+export default AttributesTable;

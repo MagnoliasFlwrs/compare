@@ -184,7 +184,7 @@ export const useTrimsStore = create<TrimsState>((set, get) => ({
             trimsObj: {
                 ...state.trimsObj,
                 page: 1,
-                filter: { generationId: value },
+                generationId: value,
             },
         })),
 

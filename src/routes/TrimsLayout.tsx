@@ -10,6 +10,7 @@ import { useGenerationStore } from '../stores/generationStore';
 import TrimsTable from '../components/trims/TrimsTable';
 import TrimsGrid from '../components/trims/TrimsGrid';
 import TrimFormModal, { type TrimFormValues } from '../components/trims/TrimFormModal';
+import EntityAttributesModal from '../components/entityAttributes/EntityAttributesModal';
 
 function jwtRole(user: unknown): string | undefined {
     if (!user || typeof user !== 'object') return undefined;
@@ -49,6 +50,7 @@ const TrimsLayout = () => {
     const [addSubmitting, setAddSubmitting] = useState(false);
     const [editTrim, setEditTrim] = useState<Trim | null>(null);
     const [editSubmitting, setEditSubmitting] = useState(false);
+    const [attrsTrim, setAttrsTrim] = useState<Trim | null>(null);
 
     useEffect(() => {
         if (!generationId) return;
@@ -201,6 +203,7 @@ const TrimsLayout = () => {
                     query={trimsObj}
                     onPageChange={onPageChange}
                     onEdit={setEditTrim}
+                    onManageAttributes={setAttrsTrim}
                     onDelete={onDelete}
                 />
 
@@ -226,6 +229,14 @@ const TrimsLayout = () => {
                     initialValues={editInitialValues}
                     onCancel={() => setEditTrim(null)}
                     onSubmit={onEditSubmit}
+                />
+
+                <EntityAttributesModal
+                    open={!!attrsTrim}
+                    resource="trims"
+                    entityId={attrsTrim?.id ?? null}
+                    entityLabel={attrsTrim?.name ?? ''}
+                    onClose={() => setAttrsTrim(null)}
                 />
             </Flex>
         );

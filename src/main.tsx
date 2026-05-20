@@ -22,6 +22,9 @@ import ManageBodyTypesLayout from "./routes/ManageBodyTypesLayout";
 import ManageDriveTypesLayout from "./routes/ManageDriveTypesLayout";
 import ManageEngineTypesLayout from "./routes/ManageEngineTypesLayout";
 import ManageTransmissionTypesLayout from "./routes/ManageTransmissionTypesLayout";
+import ManageAttributesLayout from "./routes/ManageAttributesLayout";
+import CompareSelectLayout from "./routes/CompareSelectLayout";
+import CompareResultLayout from "./routes/CompareResultLayout";
 
 function isAdminUser(user: unknown): boolean {
     if (!user || typeof user !== 'object') return false;
@@ -36,7 +39,17 @@ const AppRoutes = () => {
     const mainChildren = [
         {
             index: true as const,
-            element: <p>index</p>,
+            element: <Navigate to="/compare" replace />,
+        },
+        {
+            path: 'compare',
+            element: <CompareSelectLayout />,
+            errorElement: <ErrorPage />,
+        },
+        {
+            path: 'compare/result',
+            element: <CompareResultLayout />,
+            errorElement: <ErrorPage />,
         },
         {
             path: 'news',
@@ -112,6 +125,11 @@ const AppRoutes = () => {
                   {
                       path: 'manage-transmission-types',
                       element: <ManageTransmissionTypesLayout />,
+                      errorElement: <ErrorPage />,
+                  },
+                  {
+                      path: 'manage-attributes',
+                      element: <ManageAttributesLayout />,
                       errorElement: <ErrorPage />,
                   },
               ]

@@ -15,6 +15,7 @@ import SpecificationsGrid from '../components/specifications/SpecificationsGrid'
 import SpecificationFormModal, {
     type SpecificationFormValues,
 } from '../components/specifications/SpecificationFormModal';
+import EntityAttributesModal from '../components/entityAttributes/EntityAttributesModal';
 
 function jwtRole(user: unknown): string | undefined {
     if (!user || typeof user !== 'object') return undefined;
@@ -75,6 +76,7 @@ const SpecificationsLayout = () => {
     const [addSubmitting, setAddSubmitting] = useState(false);
     const [editSpec, setEditSpec] = useState<Specification | null>(null);
     const [editSubmitting, setEditSubmitting] = useState(false);
+    const [attrsSpec, setAttrsSpec] = useState<Specification | null>(null);
 
     useEffect(() => {
         if (!generationId) return;
@@ -231,6 +233,7 @@ const SpecificationsLayout = () => {
                     query={specificationsObj}
                     onPageChange={onPageChange}
                     onEdit={setEditSpec}
+                    onManageAttributes={setAttrsSpec}
                     onDelete={onDelete}
                 />
 
@@ -255,6 +258,14 @@ const SpecificationsLayout = () => {
                     initialValues={editInitialValues}
                     onCancel={() => setEditSpec(null)}
                     onSubmit={onEditSubmit}
+                />
+
+                <EntityAttributesModal
+                    open={!!attrsSpec}
+                    resource="specifications"
+                    entityId={attrsSpec?.id ?? null}
+                    entityLabel={attrsSpec?.name ?? ''}
+                    onClose={() => setAttrsSpec(null)}
                 />
             </Flex>
         );

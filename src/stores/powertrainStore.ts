@@ -290,7 +290,7 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
             powertrainsObj: {
                 ...state.powertrainsObj,
                 page: 1,
-                filter: { ...(state.powertrainsObj.filter ?? {}), generationId: value },
+                generationId:value,
             },
         })),
 

@@ -15,6 +15,7 @@ import PowertrainsGrid from '../components/powertrain/PowertrainsGrid';
 import PowertrainFormModal, {
     type PowertrainFormValues,
 } from '../components/powertrain/PowertrainFormModal';
+import EntityAttributesModal from '../components/entityAttributes/EntityAttributesModal';
 
 function jwtRole(user: unknown): string | undefined {
     if (!user || typeof user !== 'object') return undefined;
@@ -76,6 +77,7 @@ const PowertrainLayout = () => {
     const [addSubmitting, setAddSubmitting] = useState(false);
     const [editPt, setEditPt] = useState<Powertrain | null>(null);
     const [editSubmitting, setEditSubmitting] = useState(false);
+    const [attrsPt, setAttrsPt] = useState<Powertrain | null>(null);
 
     useEffect(() => {
         if (!generationId) return;
@@ -245,6 +247,7 @@ const PowertrainLayout = () => {
                     query={powertrainsObj}
                     onPageChange={onPageChange}
                     onEdit={setEditPt}
+                    onManageAttributes={setAttrsPt}
                     onDelete={onDelete}
                 />
 
@@ -270,6 +273,14 @@ const PowertrainLayout = () => {
                     initialValues={editInitialValues}
                     onCancel={() => setEditPt(null)}
                     onSubmit={onEditSubmit}
+                />
+
+                <EntityAttributesModal
+                    open={!!attrsPt}
+                    resource="powertrains"
+                    entityId={attrsPt?.id ?? null}
+                    entityLabel={attrsPt?.name ?? ''}
+                    onClose={() => setAttrsPt(null)}
                 />
             </Flex>
         );

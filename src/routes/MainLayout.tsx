@@ -48,6 +48,10 @@ const MainLayout = () => {
                 key: 'transmission-types',
                 label: <Link to="/manage-transmission-types">Типы КПП</Link>,
             },
+            {
+                key: 'attributes',
+                label: <Link to="/manage-attributes">Доп. характеристики</Link>,
+            },
         ],
         [],
     );
@@ -140,6 +144,7 @@ const MainLayout = () => {
                     {showUsersAdmin ? (
                         <Link to="/manage-users">Пользователи</Link>
                     ) : null}
+                    <Link to="/compare">Сравнение</Link>
                     <Link to="/news">Новости</Link>
                     <Link to="/brands">Бренды</Link>
                     {isAdmin ? (

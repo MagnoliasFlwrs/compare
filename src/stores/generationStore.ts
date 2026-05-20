@@ -100,7 +100,7 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
         const generationsByModelObj = { ...get().generationsByModelObj, ...override };
         set({ generationsByModelObj, currentModelId: modelId, loading: true });
         const queryString = qs.stringify(
-            { ...generationsByModelObj, filter: { modelId } },
+            { ...generationsByModelObj, modelId },
             { arrayFormat: 'indices', skipNulls: true },
         );
         try {

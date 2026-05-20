@@ -1,5 +1,5 @@
 import React from 'react';
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
 import { Button, ConfigProvider, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ruRU from 'antd/locale/ru_RU';
@@ -17,6 +17,7 @@ interface Props {
     query: PowertrainsQuery;
     onPageChange: (page: number, limit: number) => void;
     onEdit: (record: Powertrain) => void;
+    onManageAttributes: (record: Powertrain) => void;
     onDelete: (record: Powertrain) => Promise<void>;
 }
 
@@ -39,6 +40,7 @@ const PowertrainsTable: React.FC<Props> = ({
     query,
     onPageChange,
     onEdit,
+    onManageAttributes,
     onDelete,
 }) => {
     const driveTypes = useDriveTypesStore((s) => s.driveTypes);
@@ -113,9 +115,18 @@ const PowertrainsTable: React.FC<Props> = ({
         {
             title: 'Действия',
             key: 'actions',
-            width: 140,
+            width: 200,
             render: (_, record) => (
                 <Space>
+                    <Tooltip title="Доп. характеристики">
+                        <Button
+                            type="link"
+                            aria-label="Доп. характеристики"
+                            onClick={() => onManageAttributes(record)}
+                        >
+                            <TagsOutlined />
+                        </Button>
+                    </Tooltip>
                     <Tooltip title="Редактировать">
                         <Button
                             type="link"

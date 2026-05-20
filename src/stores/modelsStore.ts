@@ -87,7 +87,7 @@ export const useModelStore = create<ModelsState>((set, get) => ({
         const modelsByBrandObj = { ...get().modelsByBrandObj, ...override };
         set({ modelsByBrandObj, currentBrandId: brandId, loading: true });
         const queryString = qs.stringify(
-            { ...modelsByBrandObj, filter: { brandId } },
+            { ...modelsByBrandObj, brandId },
             { arrayFormat: 'indices', skipNulls: true },
         );
         try {
