@@ -22,16 +22,7 @@ const LoginLayout = () => {
     };
 
     return (
-        <div
-            style={{
-                minHeight: '100vh',
-                display: 'grid',
-                placeItems: 'center',
-                padding: 24,
-                background:
-                    'radial-gradient(1200px circle at 20% 10%, rgba(22,119,255,0.18), transparent 40%), radial-gradient(900px circle at 80% 30%, rgba(82,196,26,0.14), transparent 35%), #f5f5f5',
-            }}
-        >
+        <div className="app-login-page">
             <Card
                 style={{ width: '100%', maxWidth: 520 }}
                 styles={{ body: { padding: 24 } }}

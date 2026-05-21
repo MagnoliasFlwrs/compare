@@ -42,11 +42,9 @@ interface SpecificationsListResponse {
 export interface SpecificationsQuery {
     limit: number;
     page: number;
-    filter?: {
-        generationId?: string;
-        bodyTypeId?: string;
-        brandId?: string;
-    };
+    generationId?: string;
+    bodyTypeId?: string;
+    brandId?: string;
 }
 
 export interface CreateSpecificationPayload {
@@ -112,7 +110,9 @@ interface SpecificationState {
     loading: boolean;
 
     getSpecifications: (
-        override?: Partial<Pick<SpecificationsQuery, 'page' | 'limit' | 'filter'>>,
+        override?: Partial<
+            Pick<SpecificationsQuery, 'page' | 'limit' | 'generationId' | 'bodyTypeId' | 'brandId'>
+        >,
     ) => Promise<void>;
     /** Все характеристики поколения (обходит лимит 100 на страницу). */
     fetchAllForGeneration: (generationId: string) => Promise<void>;
@@ -160,10 +160,11 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
                 specifications: list,
                 meta,
                 specificationsObj: {
-                    ...specificationsObj,
                     page: meta?.page ?? specificationsObj.page,
                     limit: meta?.limit ?? specificationsObj.limit,
-                    filter: specificationsObj.filter,
+                    generationId: specificationsObj.generationId,
+                    bodyTypeId: specificationsObj.bodyTypeId,
+                    brandId: specificationsObj.brandId,
                 },
                 loading: false,
             });
@@ -178,14 +179,13 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
             ...get().specificationsObj,
             page: 1,
             limit: 100,
-            filter: { generationId },
+            generationId,
         };
         set({ specificationsObj, loading: true });
         try {
-            const list = await fetchAllPages<Specification>(
-                `${baseAuthUrl}/specifications`,
-                { filter: { generationId } },
-            );
+            const list = await fetchAllPages<Specification>(`${baseAuthUrl}/specifications`, {
+                generationId,
+            });
             set({
                 specifications: list,
                 meta: null,
@@ -261,7 +261,7 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
             specificationsObj: {
                 ...state.specificationsObj,
                 page: 1,
-                filter: { ...(state.specificationsObj.filter ?? {}), generationId: value },
+                generationId: value,
             },
         })),
 

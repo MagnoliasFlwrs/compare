@@ -26,6 +26,8 @@ export function formatAttributeValueDisplay(
             if (value.valueBoolean == null) return '—';
             return value.valueBoolean ? 'Да' : 'Нет';
         case 'SELECT': {
+            const embedded = (value as { option?: { value?: string } }).option;
+            if (embedded?.value?.trim()) return embedded.value.trim();
             const id = pickIdString(value.optionId);
             return optionLabel(attribute.options, id);
         }

@@ -82,7 +82,7 @@ const PowertrainLayout = () => {
     useEffect(() => {
         if (!generationId) return;
         filterByGeneration(generationId);
-        getPowertrains({ page: 1, filter: { generationId } }).catch(() => {
+        getPowertrains({ page: 1, generationId }).catch(() => {
             message.error('Не удалось загрузить силовые агрегаты');
         });
         return () => {
@@ -158,7 +158,7 @@ const PowertrainLayout = () => {
 
     const onPageChange = (page: number, limit: number) => {
         if (!generationId) return;
-        getPowertrains({ page, limit, filter: { generationId } }).catch(() => {
+        getPowertrains({ page, limit, generationId }).catch(() => {
             message.error('Не удалось загрузить силовые агрегаты');
         });
     };

@@ -4,6 +4,7 @@ import 'antd/dist/reset.css';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { App as AntdApp, ConfigProvider, Spin } from 'antd';
+import { appTheme } from './theme/antTheme';
 import { canAccessUsersAdmin, useAuth } from './store';
 import LoginLayout from "./routes/LoginLayout";
 import ErrorPage from "./routes/ErrorPage";
@@ -39,18 +40,31 @@ const AppRoutes = () => {
     const mainChildren = [
         {
             index: true as const,
-            element: <Navigate to="/compare" replace />,
+            element: <Navigate to={isAdmin ? '/brands' : '/compare'} replace />,
         },
-        {
-            path: 'compare',
-            element: <CompareSelectLayout />,
-            errorElement: <ErrorPage />,
-        },
-        {
-            path: 'compare/result',
-            element: <CompareResultLayout />,
-            errorElement: <ErrorPage />,
-        },
+        ...(!isAdmin
+            ? [
+                  {
+                      path: 'compare',
+                      element: <CompareSelectLayout />,
+                      errorElement: <ErrorPage />,
+                  },
+                  {
+                      path: 'compare/result',
+                      element: <CompareResultLayout />,
+                      errorElement: <ErrorPage />,
+                  },
+              ]
+            : [
+                  {
+                      path: 'compare',
+                      element: <Navigate to="/brands" replace />,
+                  },
+                  {
+                      path: 'compare/result',
+                      element: <Navigate to="/brands" replace />,
+                  },
+              ]),
         {
             path: 'news',
             element: <NewsLayout />,
@@ -183,18 +197,12 @@ const root = createRoot(container);
 
 const contentStyle = {
     padding: 50,
-    background: 'rgba(0, 0, 0, 0.05)',
+    background: 'var(--app-gray-100)',
     borderRadius: 4,
 };
 
 root.render(
-    <ConfigProvider
-        theme={{
-            token: {
-                colorPrimary: '#33415e',
-            },
-        }}
-    >
+    <ConfigProvider theme={appTheme}>
         <AntdApp>
             <Suspense
                 fallback={

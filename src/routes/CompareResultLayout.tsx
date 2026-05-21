@@ -1,3 +1,4 @@
+/** Экран /compare/result: проверка state и отображение CompareTableView. */
 import React from 'react';
 import { Button, ConfigProvider, Flex, Typography } from 'antd';
 import ruRU from 'antd/locale/ru_RU';

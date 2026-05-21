@@ -29,8 +29,8 @@ const DimChip: React.FC<Props> = ({ label, value }) => (
                 minWidth: 44,
                 padding: '2px 10px',
                 textAlign: 'center',
-                border: '1px dashed #bfbfbf',
-                background: '#fafafa',
+                border: '1px dashed var(--app-gray-300)',
+                background: 'var(--app-gray-50)',
                 borderRadius: 2,
             }}
         >

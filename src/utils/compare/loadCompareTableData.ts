@@ -1,17 +1,18 @@
+/**
+ * Загрузка одной половины таблицы сравнения (левой или правой):
+ * список поколений → getGenerationDetailed → map/merge.
+ */
 import { baseAuthUrl } from '../../store';
 import type { Brand } from '../../stores/brandsStore';
-import type { CarPrice } from '../../stores/carPricesStore';
-import { getCarPriceCellKey } from '../../stores/carPricesStore';
-import type { Powertrain } from '../../stores/powertrainStore';
-import type { Specification } from '../../stores/specificationStore';
-import type { Trim } from '../../stores/trimsStore';
-import type { Attribute } from '../../types/attributes';
+import { useGenerationStore } from '../../stores/generationStore';
 import type { CompareSideSelection } from '../../types/compare';
 import type { Generation } from '../../types/generation';
-import type { EntityAttributeValue } from '../../types/entityAttributeValue';
 import { fetchAllPages } from '../paginatedFetch';
-import { listEntityAttributeValues } from '../entityAttributeValuesApi';
-import { pickIdString } from '../pickIdString';
+import {
+    formatPowertrainLabel,
+    mapGenerationDetailedToCompareSide,
+    mergeGenerationsDetailedToCompareSide,
+} from './mapGenerationDetailed';
 
 export type CompareTableSide = {
     selection: CompareSideSelection;
@@ -19,154 +20,95 @@ export type CompareTableSide = {
     modelName: string;
     generation: Generation | null;
     generationLabel: string;
-    trims: Trim[];
-    powertrains: Powertrain[];
-    priceByCell: Record<string, CarPrice>;
-    specification: Specification | null;
-    trimAttributes: Attribute[];
-    specAttributes: Attribute[];
-    valuesByTrimId: Record<string, Record<string, EntityAttributeValue>>;
-    specValuesByAttributeId: Record<string, EntityAttributeValue>;
+    trims: ReturnType<typeof mapGenerationDetailedToCompareSide>['trims'];
+    powertrains: ReturnType<typeof mapGenerationDetailedToCompareSide>['powertrains'];
+    priceByCell: ReturnType<typeof mapGenerationDetailedToCompareSide>['priceByCell'];
+    specifications: ReturnType<typeof mapGenerationDetailedToCompareSide>['specifications'];
+    specification: ReturnType<typeof mapGenerationDetailedToCompareSide>['specification'];
+    trimAttributes: ReturnType<typeof mapGenerationDetailedToCompareSide>['trimAttributes'];
+    specAttributesBySpecId: ReturnType<
+        typeof mapGenerationDetailedToCompareSide
+    >['specAttributesBySpecId'];
+    valuesByTrimId: ReturnType<typeof mapGenerationDetailedToCompareSide>['valuesByTrimId'];
+    specValuesBySpecId: ReturnType<
+        typeof mapGenerationDetailedToCompareSide
+    >['specValuesBySpecId'];
 };
-
-function generationLabel(g: Generation): string {
-    const years = `${g.yearFrom}–${g.yearTo || '…'}`;
-    return `#${g.number}${g.restyling ? ` (${g.restyling})` : ''} · ${years}`;
-}
-
-function formatPowertrainLabel(p: Powertrain): string {
-    const parts = [p.name?.trim()].filter(Boolean);
-    if (p.engine) parts.push(p.engine);
-    if (p.enginePower) parts.push(`${p.enginePower} л.с.`);
-    return parts.length > 0 ? parts.join(' ') : `Агрегат`;
-}
 
 export { formatPowertrainLabel };
 
-async function loadValuesMap(
-    resource: 'trims' | 'specifications',
-    entityIds: string[],
-): Promise<Record<string, Record<string, EntityAttributeValue>>> {
-    const result: Record<string, Record<string, EntityAttributeValue>> = {};
-    await Promise.all(
-        entityIds.map(async (entityId) => {
-            const list = await listEntityAttributeValues(resource, entityId);
-            const byAttr: Record<string, EntityAttributeValue> = {};
-            for (const v of list) {
-                const attrId = pickIdString(v.attributeId);
-                if (attrId) byAttr[attrId] = v;
-            }
-            result[entityId] = byAttr;
-        }),
-    );
-    return result;
+/** Поколения для загрузки: одно из выбора или все модели, если поколение не указано. */
+async function resolveGenerationIds(selection: CompareSideSelection): Promise<string[]> {
+    if (selection.generationId) {
+        return [selection.generationId];
+    }
+
+    const generations = await fetchAllPages<Generation>(`${baseAuthUrl}/generations`, {
+        modelId: selection.modelId,
+    });
+
+    return generations
+        .sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
+        .map((g) => g.id);
 }
+
+const emptySide = (
+    selection: CompareSideSelection,
+    brand: Brand | null,
+): CompareTableSide => ({
+    selection,
+    brand,
+    modelName: selection.modelName,
+    generation: null,
+    generationLabel: '',
+    trims: [],
+    powertrains: [],
+    priceByCell: {},
+    specifications: [],
+    specification: null,
+    trimAttributes: [],
+    specAttributesBySpecId: {},
+    valuesByTrimId: {},
+    specValuesBySpecId: {},
+});
 
 export async function loadCompareTableSide(
     selection: CompareSideSelection,
 ): Promise<CompareTableSide> {
-    const [brandList, generations, trimAttrs, specAttrs] = await Promise.all([
-        fetchAllPages<Brand>(`${baseAuthUrl}/brands`, {}),
-        fetchAllPages<Generation>(`${baseAuthUrl}/generations`, {
-            modelId: selection.modelId,
-        }),
-        fetchAllPages<Attribute>(`${baseAuthUrl}/attributes`, { category: 'TRIM' }),
-        fetchAllPages<Attribute>(`${baseAuthUrl}/attributes`, { category: 'SPECIFICATION' }),
-    ]);
-
+    const brandList = await fetchAllPages<Brand>(`${baseAuthUrl}/brands`, {});
     const brand =
         brandList.find((b) => b.id === selection.brandId && !b.isHidden) ?? null;
 
-    let generation: Generation | null = null;
-    const sortedGens = generations.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
-    if (selection.generationId) {
-        generation = sortedGens.find((g) => g.id === selection.generationId) ?? null;
-    } else if (sortedGens.length > 0) {
-        generation = sortedGens[0];
+    const generationIds = await resolveGenerationIds(selection);
+    if (generationIds.length === 0) {
+        return emptySide(selection, brand);
     }
 
-    if (!generation) {
-        return {
-            selection,
-            brand,
-            modelName: selection.modelName,
-            generation: null,
-            generationLabel: '',
-            trims: [],
-            powertrains: [],
-            priceByCell: {},
-            specification: null,
-            trimAttributes: trimAttrs,
-            specAttributes: specAttrs,
-            valuesByTrimId: {},
-            specValuesByAttributeId: {},
-        };
-    }
+    const getGenerationDetailed = useGenerationStore.getState().getGenerationDetailed;
 
-    const genLabel =
-        selection.generationLabel ?? generationLabel(generation);
-
-    const [trimsRaw, powertrainsRaw, specifications, allPrices] = await Promise.all([
-        fetchAllPages<Trim>(`${baseAuthUrl}/trims`, {
-            filter: { generationId: generation.id },
-        }),
-        fetchAllPages<Powertrain>(`${baseAuthUrl}/powertrains`, {
-            filter: { generationId: generation.id },
-        }),
-        fetchAllPages<Specification>(`${baseAuthUrl}/specifications`, {
-            filter: { generationId: generation.id },
-        }),
-        fetchAllPages<CarPrice>(`${baseAuthUrl}/car-prices`, {}),
-    ]);
-
-    let trims = trimsRaw.filter((t) => !t.isHidden).sort((a, b) => a.order - b.order);
-    let powertrains = powertrainsRaw
-        .filter((p) => !p.isHidden)
-        .sort((a, b) => a.order - b.order);
-
-    if (selection.trimId) {
-        trims = trims.filter((t) => t.id === selection.trimId);
-    }
-    if (selection.powertrainId) {
-        powertrains = powertrains.filter((p) => p.id === selection.powertrainId);
-    }
-
-    const trimIds = new Set(trims.map((t) => t.id));
-    const powertrainIds = new Set(powertrains.map((p) => p.id));
-    const priceByCell: Record<string, CarPrice> = {};
-    for (const price of allPrices) {
-        if (trimIds.has(price.trimId) && powertrainIds.has(price.powertrainId)) {
-            priceByCell[getCarPriceCellKey(price.powertrainId, price.trimId)] = price;
-        }
-    }
-
-    const visibleSpecs = specifications.filter((s) => !s.isHidden);
-    const specification = visibleSpecs[0] ?? null;
-
-    const valuesByTrimId = await loadValuesMap(
-        'trims',
-        trims.map((t) => t.id),
+    const detailedList = await Promise.all(
+        generationIds.map((id) => getGenerationDetailed(id)),
     );
 
-    let specValuesByAttributeId: Record<string, EntityAttributeValue> = {};
-    if (specification) {
-        const specMap = await loadValuesMap('specifications', [specification.id]);
-        specValuesByAttributeId = specMap[specification.id] ?? {};
-    }
+    const mapped =
+        detailedList.length === 1
+            ? mapGenerationDetailedToCompareSide(detailedList[0], selection)
+            : mergeGenerationsDetailedToCompareSide(detailedList, selection);
 
     return {
         selection,
         brand,
         modelName: selection.modelName,
-        generation,
-        generationLabel: genLabel,
-        trims,
-        powertrains,
-        priceByCell,
-        specification,
-        trimAttributes: trimAttrs,
-        specAttributes: specAttrs,
-        valuesByTrimId,
-        specValuesByAttributeId,
+        generation: mapped.generation,
+        generationLabel: mapped.generationLabel,
+        trims: mapped.trims,
+        powertrains: mapped.powertrains,
+        priceByCell: mapped.priceByCell,
+        specifications: mapped.specifications,
+        specification: mapped.specification,
+        specAttributesBySpecId: mapped.specAttributesBySpecId,
+        trimAttributes: mapped.trimAttributes,
+        valuesByTrimId: mapped.valuesByTrimId,
+        specValuesBySpecId: mapped.specValuesBySpecId,
     };
 }

@@ -1,5 +1,254 @@
+/* Таблица сравнения — те же токены, что и :root (theme.css) */
+
 .compare-print-root {
     width: 100%;
+    font-family: var(--app-font);
+    color: var(--app-black);
+}
+
+.compare-print-root .compare-toolbar {
+    color: var(--app-gray-500);
+}
+
+.compare-table-layout {
+    display: flex;
+    width: 100%;
+    align-items: flex-start;
+}
+
+.compare-car-block {
+    flex: 0 0 50%;
+    width: 50%;
+    max-width: 50%;
+    box-sizing: border-box;
+    padding: 0 12px;
+}
+
+.compare-car-block.compare-block--left {
+    padding-right: 20px;
+    border-right: 1px solid var(--app-gray-300);
+}
+
+.compare-car-block.compare-block--right {
+    padding-left: 20px;
+}
+
+.compare-car-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 8px 4px;
+}
+
+.compare-block--left .compare-car-header {
+    flex-direction: row;
+}
+
+.compare-block--right .compare-car-header {
+    flex-direction: row;
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.compare-car-header h4,
+.compare-car-header .ant-typography {
+    margin: 0;
+    font-family: var(--app-font);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--app-black);
+}
+
+.compare-car-header .ant-typography-secondary {
+    color: var(--app-gray-500) !important;
+}
+
+.compare-brand-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border: 1px solid var(--app-gray-200);
+    border-radius: 4px;
+    background: var(--app-white);
+    flex-shrink: 0;
+}
+
+.compare-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.compare-side-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-family: var(--app-font);
+    font-size: 12px;
+    color: var(--app-black);
+}
+
+.compare-sticky-head td {
+    box-shadow: 0 1px 0 rgba(20, 24, 28, 0.2);
+}
+
+.compare-side-table td {
+    border: 1px solid var(--app-gray-300);
+    padding: 6px 10px;
+    vertical-align: middle;
+}
+
+.compare-col-fixed {
+    width: 168px;
+    min-width: 168px;
+    max-width: 168px;
+    box-sizing: border-box;
+    background: var(--app-gray-100);
+    color: var(--app-black);
+    text-align: left;
+    font-weight: 500;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.compare-block--left .compare-col-fixed {
+    border-right: 2px solid var(--app-gray-300);
+}
+
+.compare-block--right .compare-col-fixed {
+    border-left: 2px solid var(--app-gray-300);
+}
+
+.compare-col-fixed--dark {
+    background: var(--app-black);
+    color: var(--app-white);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.compare-col-fixed--controls {
+    background: var(--app-black);
+    color: var(--app-white);
+    vertical-align: top;
+    padding: 10px 12px;
+}
+
+.compare-col-trim {
+    text-align: center;
+    background: var(--app-white);
+    color: var(--app-black);
+}
+
+.compare-col-trim--dark {
+    background: var(--app-dark-blue);
+    color: var(--app-white);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.compare-col-trim--header {
+    background: var(--app-contrast-blue);
+    color: var(--app-white);
+    font-weight: 600;
+    font-size: 13px;
+    position: relative;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.compare-col-trim--empty {
+    background: var(--app-gray-50);
+    color: var(--app-gray-400);
+}
+
+.compare-side-table tbody tr.row-char td {
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.compare-side-table tbody tr.row-char--odd td.compare-col-trim,
+.compare-side-table tbody tr.row-char--odd td.compare-col-fixed--label {
+    background: var(--app-white);
+}
+
+.compare-side-table tbody tr.row-char--even td.compare-col-trim,
+.compare-side-table tbody tr.row-char--even td.compare-col-fixed--label {
+    background: var(--app-gray-100);
+}
+
+.compare-side-table tbody tr.row-char--hover td.compare-col-trim,
+.compare-side-table tbody tr.row-char--hover td.compare-col-fixed--label {
+    background: var(--app-hover) !important;
+}
+
+.compare-col-fixed--label {
+    background: var(--app-gray-100);
+    color: var(--app-black);
+}
+
+.compare-price-empty {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.compare-trim-close {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+}
+
+.compare-trim-close:hover {
+    color: var(--app-white);
+}
+
+.compare-controls-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.compare-controls-inline .ant-checkbox-wrapper {
+    color: var(--app-white);
+    font-family: var(--app-font);
+    font-size: 11px;
+    line-height: 1.35;
+    align-items: flex-start;
+}
+
+.compare-controls-inline .ant-checkbox-wrapper span:not(.ant-checkbox) {
+    color: var(--app-white);
+}
+
+.compare-controls-inline .ant-select {
+    font-family: var(--app-font);
+}
+
+.compare-cell-boolean-yes {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--app-contrast-blue);
+}
+
+.compare-show-all-trims {
+    margin-top: 8px;
+    padding: 0;
+    font-size: 11px;
+    color: #5a7a9e !important;
+}
+
+.compare-show-all-trims:hover {
+    color: var(--app-white) !important;
 }
 
 .compare-toolbar {
@@ -11,157 +260,6 @@
     margin-bottom: 20px;
 }
 
-.compare-table-layout {
-    display: flex;
-    gap: 0;
-    align-items: flex-start;
-    overflow-x: auto;
-}
-
-.compare-car-block {
-    flex: 1 1 0;
-    min-width: 280px;
-}
-
-.compare-car-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding: 8px 4px;
-}
-
-.compare-car-header h4 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-}
-
-.compare-brand-logo {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    border: 1px solid #e8e8e8;
-    border-radius: 4px;
-    background: #fff;
-}
-
-.compare-matrix-wrap {
-    overflow-x: auto;
-    margin-bottom: 16px;
-}
-
-.compare-matrix {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-
-.compare-matrix th,
-.compare-matrix td {
-    border: 1px solid #3d3d3d;
-    padding: 8px 10px;
-    text-align: center;
-    vertical-align: middle;
-}
-
-.compare-matrix thead th {
-    background: #2a2a2a;
-    color: #fff;
-    font-weight: 600;
-    position: relative;
-}
-
-.compare-matrix tbody td:first-child {
-    background: #2a2a2a;
-    color: #fff;
-    text-align: left;
-    font-weight: 500;
-    min-width: 140px;
-}
-
-.compare-matrix tbody td:not(:first-child) {
-    background: #3a3a3a;
-    color: #fff;
-}
-
-.compare-matrix .compare-price-empty {
-    color: rgba(255, 255, 255, 0.45);
-}
-
-.compare-trim-close {
-    position: absolute;
-    top: 2px;
-    right: 4px;
-    border: none;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.7);
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1;
-    padding: 0 4px;
-}
-
-.compare-trim-close:hover {
-    color: #fff;
-}
-
-.compare-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-    min-height: 56px;
-}
-
-.compare-char-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
-
-.compare-char-table th,
-.compare-char-table td {
-    border: 1px solid #d9d9d9;
-    padding: 6px 8px;
-    text-align: center;
-    vertical-align: middle;
-}
-
-.compare-char-table tbody tr:nth-child(even) td:not(.compare-char-label) {
-    background: #fafafa;
-}
-
-.compare-char-label {
-    background: #f0f0f0;
-    font-weight: 500;
-    text-align: left !important;
-    min-width: 120px;
-    max-width: 160px;
-    font-size: 11px;
-    line-height: 1.3;
-}
-
-.compare-cell-advantage {
-    background: #e6f4ff !important;
-    font-weight: 600;
-    color: #0958d9;
-}
-
-.compare-cell-boolean-yes {
-    font-size: 16px;
-    font-weight: 700;
-}
-
-.compare-block--left .compare-char-label {
-    border-left: none;
-}
-
-.compare-block--right .compare-char-label {
-    border-right: none;
-}
-
 @media print {
     .ant-layout-header,
     .no-print {
@@ -170,14 +268,6 @@
 
     .ant-layout-content {
         padding: 12px !important;
-    }
-
-    .compare-print-root {
-        padding: 0;
-    }
-
-    .compare-table-layout {
-        overflow: visible;
     }
 
     .compare-car-block {

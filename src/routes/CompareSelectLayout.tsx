@@ -1,3 +1,4 @@
+/** Экран /compare: два каскадных селектора и переход к результату с выбором в state. */
 import React, { useState } from 'react';
 import { Button, ConfigProvider, Divider, Flex, Typography } from 'antd';
 import ruRU from 'antd/locale/ru_RU';

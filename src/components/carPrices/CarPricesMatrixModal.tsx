@@ -208,7 +208,7 @@ const CarPricesMatrixModal: React.FC<Props> = ({ generation, modelName, onClose 
                                             position: 'sticky',
                                             left: 0,
                                             zIndex: 2,
-                                            background: '#fafafa',
+                                            background: 'var(--app-gray-50)',
                                             border: '1px solid #f0f0f0',
                                             padding: '8px 12px',
                                             textAlign: 'left',
@@ -222,7 +222,7 @@ const CarPricesMatrixModal: React.FC<Props> = ({ generation, modelName, onClose 
                                                 border: '1px solid #f0f0f0',
                                                 padding: '8px 10px',
                                                 textAlign: 'center',
-                                                background: '#fafafa',
+                                                background: 'var(--app-gray-50)',
                                                 fontWeight: 600,
                                                 verticalAlign: 'bottom',
                                             }}
@@ -240,7 +240,7 @@ const CarPricesMatrixModal: React.FC<Props> = ({ generation, modelName, onClose 
                                                 position: 'sticky',
                                                 left: 0,
                                                 zIndex: 1,
-                                                background: '#fff',
+                                                background: 'var(--app-white)',
                                                 border: '1px solid #f0f0f0',
                                                 padding: '10px 12px',
                                                 fontWeight: 500,
@@ -260,7 +260,7 @@ const CarPricesMatrixModal: React.FC<Props> = ({ generation, modelName, onClose 
                                                         padding: 8,
                                                         textAlign: 'center',
                                                         verticalAlign: 'middle',
-                                                        background: '#f5f5f5',
+                                                        background: 'var(--app-gray-50)',
                                                     }}
                                                 >
                                                     {cell ? (

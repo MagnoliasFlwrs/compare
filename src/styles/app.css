@@ -1,0 +1,84 @@
+/* Оболочка приложения: шапка, вход, типовые ссылки */
+
+.app-header.ant-layout-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 24px;
+    background: var(--app-dark-blue) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    line-height: 1.4;
+}
+
+.app-header__brand.ant-typography {
+    color: var(--app-white) !important;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.app-header__nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.app-header__nav a {
+    color: rgba(255, 255, 255, 0.92);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.app-header__nav a:hover {
+    color: var(--app-white);
+}
+
+.app-header__nav .ant-dropdown-trigger {
+    color: rgba(255, 255, 255, 0.92);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.app-header__nav .ant-dropdown-trigger:hover {
+    color: var(--app-white);
+}
+
+.app-content.ant-layout-content {
+    padding: 24px 50px;
+    background: var(--app-bg-page);
+    min-height: calc(100vh - 56px);
+}
+
+.app-login-page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+        radial-gradient(
+            1200px circle at 20% 10%,
+            rgba(22, 24, 47, 0.12),
+            transparent 45%
+        ),
+        radial-gradient(
+            900px circle at 80% 30%,
+            rgba(51, 65, 94, 0.14),
+            transparent 40%
+        ),
+        var(--app-gray-50);
+}
+
+.app-login-page .ant-card {
+    border-color: var(--app-gray-200);
+    box-shadow: 0 8px 24px rgba(20, 24, 28, 0.08);
+}
+
+.app-surface-muted {
+    background: var(--app-gray-50);
+}
+
+.app-chip-value {
+    border: 1px dashed var(--app-gray-300);
+    background: var(--app-gray-50);
+    border-radius: 2px;
+}

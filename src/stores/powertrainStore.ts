@@ -42,9 +42,7 @@ interface PowertrainsListResponse {
 export interface PowertrainsQuery {
     limit: number;
     page: number;
-    filter?: {
-        generationId?: string;
-    };
+    generationId?: string;
 }
 
 /** Бэк (@IsDecimal) принимает строку вида "12.5", а не JSON number. */
@@ -137,7 +135,7 @@ interface PowertrainState {
     loading: boolean;
 
     getPowertrains: (
-        override?: Partial<Pick<PowertrainsQuery, 'page' | 'limit' | 'filter'>>,
+        override?: Partial<Pick<PowertrainsQuery, 'page' | 'limit' | 'generationId'>>,
     ) => Promise<void>;
     /** Все силовые агрегаты поколения (обходит лимит 100 на страницу). */
     fetchAllForGeneration: (generationId: string) => Promise<void>;
@@ -185,10 +183,9 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
                 powertrains: list,
                 meta,
                 powertrainsObj: {
-                    ...powertrainsObj,
                     page: meta?.page ?? powertrainsObj.page,
                     limit: meta?.limit ?? powertrainsObj.limit,
-                    filter: powertrainsObj.filter,
+                    generationId: powertrainsObj.generationId,
                 },
                 loading: false,
             });
@@ -203,14 +200,13 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
             ...get().powertrainsObj,
             page: 1,
             limit: 100,
-            filter: { generationId },
+            generationId,
         };
         set({ powertrainsObj, loading: true });
         try {
-            const list = await fetchAllPages<Powertrain>(
-                `${baseAuthUrl}/powertrains`,
-                { filter: { generationId } },
-            );
+            const list = await fetchAllPages<Powertrain>(`${baseAuthUrl}/powertrains`, {
+                generationId,
+            });
             set({
                 powertrains: list,
                 meta: null,
@@ -290,7 +286,7 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
             powertrainsObj: {
                 ...state.powertrainsObj,
                 page: 1,
-                generationId:value,
+                generationId: value,
             },
         })),
 

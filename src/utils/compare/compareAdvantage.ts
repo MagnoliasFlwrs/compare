@@ -1,3 +1,4 @@
+/** Сравнение значений атрибутов для фильтра «оставить преимущества» в таблице. */
 import type { Attribute, AttributeOption } from '../../types/attributes';
 import type { EntityAttributeValue } from '../../types/entityAttributeValue';
 import { pickIdString } from '../pickIdString';

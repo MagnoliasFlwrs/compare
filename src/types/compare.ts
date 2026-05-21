@@ -1,3 +1,8 @@
+/**
+ * Типы и состояние UI для модуля сравнения (/compare, /compare/result).
+ * CompareNavigateState передаётся через react-router location.state.
+ */
+
 /** Выбор автомобиля на экране сравнения (передаётся в result через location.state). */
 export type CompareSideSelection = {
     brandId: string;
@@ -34,6 +39,14 @@ export type CompareSideDraft = {
 export function isCompareSideReady(side: CompareSideDraft): boolean {
     return Boolean(side.brandId && side.modelId);
 }
+
+export type CompareBlockUiState = {
+    keepAdvantages: boolean;
+    showBaseCharacteristics: boolean;
+    hiddenTrimIds: Set<string>;
+    /** Активная базовая спецификация (вариант кузова), если их несколько. */
+    selectedSpecificationId?: string;
+};
 
 export function draftToSelection(side: CompareSideDraft): CompareSideSelection {
     return {

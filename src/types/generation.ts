@@ -46,6 +46,7 @@ export interface CloneGenerationPayload {
 export interface GenerationsQuery {
     page: number;
     limit: number;
+    modelId?: string;
 }
 
 export interface GenerationImage {

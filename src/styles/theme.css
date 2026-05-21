@@ -1,0 +1,26 @@
+/**
+ * Палитра проекта: Montserrat, #14181c, #16182f, #33415e, белый и серые.
+ */
+:root {
+    --app-font: 'Montserrat', system-ui, -apple-system, sans-serif;
+
+    --app-black: #14181c;
+    --app-dark-blue: #16182f;
+    --app-contrast-blue: #33415e;
+    --app-white: #ffffff;
+
+    --app-gray-50: #fafafa;
+    --app-gray-100: #f0f0f0;
+    --app-gray-200: #e8e8e8;
+    --app-gray-300: #d4d4d4;
+    --app-gray-400: #a3a3a3;
+    --app-gray-500: #737373;
+
+    --app-hover: #e4e7ec;
+    --app-link: #33415e;
+    --app-link-hover: #16182f;
+
+    --app-border: var(--app-gray-300);
+    --app-bg-page: var(--app-gray-50);
+    --app-bg-surface: var(--app-white);
+}

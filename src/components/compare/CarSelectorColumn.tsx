@@ -1,3 +1,8 @@
+/**
+ * Одна колонка выбора автомобиля на /compare.
+ * Каскад: бренд → модель → поколение → (опционально) агрегат и комплектация.
+ * При смене уровня сбрасываются зависимые поля ниже.
+ */
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, Flex, Select, Typography } from 'antd';
 import type { Brand } from '../../stores/brandsStore';
@@ -52,6 +57,7 @@ const CarSelectorColumn: React.FC<Props> = ({ title, value, onChange }) => {
     const [loadingPowertrains, setLoadingPowertrains] = useState(false);
     const [loadingTrims, setLoadingTrims] = useState(false);
 
+    // Справочники подгружаются по мере выбора родительского поля
     useEffect(() => {
         setLoadingBrands(true);
         fetchAllPages<Brand>(`${baseAuthUrl}/brands`, {})
@@ -100,10 +106,10 @@ const CarSelectorColumn: React.FC<Props> = ({ title, value, onChange }) => {
         setLoadingTrims(true);
         Promise.all([
             fetchAllPages<Powertrain>(`${baseAuthUrl}/powertrains`, {
-                filter: { generationId: value.generationId },
+                generationId: value.generationId,
             }),
             fetchAllPages<Trim>(`${baseAuthUrl}/trims`, {
-                filter: { generationId: value.generationId },
+                generationId: value.generationId,
             }),
         ])
             .then(([pt, tr]) => {

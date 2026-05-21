@@ -74,12 +74,8 @@ export const useCarPricesStore = create<CarPricesState>((set, get) => ({
         set({ loading: true });
         try {
             const [trims, powertrains, allPrices] = await Promise.all([
-                fetchAllPages<Trim>(`${baseAuthUrl}/trims`, {
-                    filter: { generationId },
-                }),
-                fetchAllPages<Powertrain>(`${baseAuthUrl}/powertrains`, {
-                    filter: { generationId },
-                }),
+                fetchAllPages<Trim>(`${baseAuthUrl}/trims`, { generationId }),
+                fetchAllPages<Powertrain>(`${baseAuthUrl}/powertrains`, { generationId }),
                 fetchAllPages<CarPrice>(`${baseAuthUrl}/car-prices`, {}),
             ]);
 

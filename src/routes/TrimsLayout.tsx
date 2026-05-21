@@ -55,7 +55,7 @@ const TrimsLayout = () => {
     useEffect(() => {
         if (!generationId) return;
         filterByGeneration(generationId);
-        getTrims({ page: 1, filter: { generationId } }).catch(() => {
+        getTrims({ page: 1, generationId }).catch(() => {
             message.error('Не удалось загрузить комплектации');
         });
         return () => {
@@ -125,7 +125,7 @@ const TrimsLayout = () => {
 
     const onPageChange = (page: number, limit: number) => {
         if (!generationId) return;
-        getTrims({ page, limit, filter: { generationId } }).catch(() => {
+        getTrims({ page, limit, generationId }).catch(() => {
             message.error('Не удалось загрузить комплектации');
         });
     };

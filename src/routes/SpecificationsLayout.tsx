@@ -81,7 +81,7 @@ const SpecificationsLayout = () => {
     useEffect(() => {
         if (!generationId) return;
         filterByGeneration(generationId);
-        getSpecifications({ page: 1, filter: { generationId } }).catch(() => {
+        getSpecifications({ page: 1, generationId }).catch(() => {
             message.error('Не удалось загрузить характеристики');
         });
         return () => {
@@ -145,7 +145,7 @@ const SpecificationsLayout = () => {
 
     const onPageChange = (page: number, limit: number) => {
         if (!generationId) return;
-        getSpecifications({ page, limit, filter: { generationId } }).catch(() => {
+        getSpecifications({ page, limit, generationId }).catch(() => {
             message.error('Не удалось загрузить характеристики');
         });
     };

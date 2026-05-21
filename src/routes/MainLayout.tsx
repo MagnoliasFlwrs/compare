@@ -130,21 +130,15 @@ const MainLayout = () => {
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Layout.Header
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: '#fff',
-                    borderBottom: '1px solid rgba(0,0,0,0.06)',
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <Typography.Text strong>My Compare</Typography.Text>
+            <Layout.Header className="app-header">
+                <div className="app-header__nav">
+                    <Typography.Text strong className="app-header__brand">
+                        My Compare
+                    </Typography.Text>
                     {showUsersAdmin ? (
                         <Link to="/manage-users">Пользователи</Link>
                     ) : null}
-                    <Link to="/compare">Сравнение</Link>
+                    {!isAdmin ? <Link to="/compare">Сравнение</Link> : null}
                     <Link to="/news">Новости</Link>
                     <Link to="/brands">Бренды</Link>
                     {isAdmin ? (
@@ -172,13 +166,13 @@ const MainLayout = () => {
                         style={{
                             cursor: 'pointer',
                             backgroundColor: 'transparent',
-                            color: '#33415e',
-                            border: '1px solid rgba(51, 65, 94, 0.35)',
+                            color: 'var(--app-white)',
+                            border: '1px solid rgba(255, 255, 255, 0.45)',
                         }}
                     />
                 </Dropdown>
             </Layout.Header>
-            <Layout.Content style={{ padding: '24px 50px' }}>
+            <Layout.Content className="app-content">
                 <Outlet />
             </Layout.Content>
 

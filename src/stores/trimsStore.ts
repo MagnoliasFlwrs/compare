@@ -27,9 +27,7 @@ interface TrimsListResponse {
 export interface TrimsQuery {
     limit: number;
     page: number;
-    filter?: {
-        generationId: string;
-    };
+    generationId?: string;
 }
 
 export interface CreateTrimPayload {
@@ -74,7 +72,7 @@ interface TrimsState {
     currentTrim: Trim | null;
     loading: boolean;
 
-    getTrims: (override?: Partial<Pick<TrimsQuery, 'page' | 'limit' | 'filter'>>) => Promise<void>;
+    getTrims: (override?: Partial<Pick<TrimsQuery, 'page' | 'limit' | 'generationId'>>) => Promise<void>;
     getTrimById: (id: string) => Promise<Trim>;
     createTrim: (payload: CreateTrimPayload) => Promise<void>;
     updateTrimById: (id: string, payload: UpdateTrimPayload) => Promise<void>;
@@ -115,10 +113,9 @@ export const useTrimsStore = create<TrimsState>((set, get) => ({
                 trims: list,
                 meta,
                 trimsObj: {
-                    ...trimsObj,
                     page: meta?.page ?? trimsObj.page,
                     limit: meta?.limit ?? trimsObj.limit,
-                    filter: trimsObj.filter,
+                    generationId: trimsObj.generationId,
                 },
                 loading: false,
             });

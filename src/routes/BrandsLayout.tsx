@@ -445,7 +445,7 @@ const BrandsLayout = () => {
                                 <div
                                     style={{
                                         height: 220,
-                                        background: '#f5f5f5',
+                                        background: 'var(--app-gray-50)',
                                         display: 'grid',
                                         placeItems: 'center',
                                     }}
@@ -496,7 +496,7 @@ const BrandsLayout = () => {
                                             <div
                                                 style={{
                                                     height: 160,
-                                                    background: '#f5f5f5',
+                                                    background: 'var(--app-gray-50)',
                                                     display: 'grid',
                                                     placeItems: 'center',
                                                 }}

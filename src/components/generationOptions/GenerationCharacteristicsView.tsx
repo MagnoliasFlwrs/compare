@@ -65,7 +65,7 @@ function formatPowertrainRow(
 
 const galleryBoxStyle: React.CSSProperties = {
     width: '100%',
-    background: '#f5f5f5',
+    background: 'var(--app-gray-50)',
     borderRadius: 8,
     padding: 12,
     minHeight: 200,
@@ -169,7 +169,7 @@ const GenerationCharacteristicsView: React.FC<Props> = ({
         if (imageUrls.length === 0) {
             return (
                 <div style={galleryBoxStyle}>
-                    <CarOutlined style={{ fontSize: 56, color: '#bbb' }} />
+                    <CarOutlined style={{ fontSize: 56, color: 'var(--app-gray-400)' }} />
                     <Typography.Text type="secondary" style={{ marginTop: 8, fontSize: 12 }}>
                         Нет изображений
                     </Typography.Text>

@@ -15,6 +15,7 @@ import type {
     UpdateGenerationImagePayload,
     UpdateGenerationPayload,
 } from '../types/generation';
+import type { GenerationDetailed } from '../types/generationDetailed';
 
 interface GenerationsState {
     generationsByModel: Generation[];
@@ -42,6 +43,7 @@ interface GenerationsState {
 
     getGenerationsByModel: (modelId: string, override?: Partial<GenerationsQuery>) => Promise<void>;
     getGenerationById: (generationId: string) => Promise<Generation>;
+    getGenerationDetailed: (generationId: string) => Promise<GenerationDetailed>;
     createGeneration: (payload: CreateGenerationPayload) => Promise<void>;
     updateGeneration: (generationId: string, payload: UpdateGenerationPayload) => Promise<void>;
     deleteGeneration: (generationId: string) => Promise<void>;
@@ -141,6 +143,18 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
         }
     },
 
+    getGenerationDetailed: async (generationId) => {
+        try {
+            const res = await axiosInstanceAll.get(
+                `${baseAuthUrl}/generations/${encodeURIComponent(generationId)}/detailed`,
+                { headers: { accept: 'application/json' } },
+            );
+            return res.data as GenerationDetailed;
+        } catch {
+            throw new Error('Не удалось загрузить данные поколения');
+        }
+    },
+
     createGeneration: async (payload) => {
         set({ loading: true });
         try {
@@ -236,7 +250,7 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
         }
 
         const queryString = qs.stringify(
-            { ...imagesObj, filter: { generationId } },
+            { ...imagesObj, generationId:generationId },
             { arrayFormat: 'indices', skipNulls: true },
         );
         try {
@@ -344,7 +358,7 @@ export const useGenerationStore = create<GenerationsState>((set, get) => ({
         }));
 
         const queryString = qs.stringify(
-            { page: 1, limit: 100, filter: { generationId } },
+            { page: 1, limit: 100, generationId:generationId },
             { arrayFormat: 'indices', skipNulls: true },
         );
 

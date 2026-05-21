@@ -3,7 +3,7 @@ import axios from 'axios';
 import { persist } from "zustand/middleware";
 import {Mutex} from "async-mutex";
 
-export const baseAuthUrl = import.meta.env.VITE_APP_AUTH_URL || 'http://46.16.35.169/api/v1';
+export const baseAuthUrl = import.meta.env.VITE_APP_AUTH_URL || 'https://46.16.35.169/api/v1';
 
 /** Пути API (относительно `baseAuthUrl`) */
 export const authEndpoints = {
