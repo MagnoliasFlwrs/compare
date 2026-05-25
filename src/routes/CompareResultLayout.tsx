@@ -23,9 +23,6 @@ const CompareResultLayout = () => {
                     <Typography.Title level={3} style={{ margin: 0 }}>
                         Сравнение
                     </Typography.Title>
-                    <Button onClick={() => navigate('/compare', { state })}>
-                        Изменить выбор
-                    </Button>
                 </Flex>
 
                 <CompareTableView state={state} />

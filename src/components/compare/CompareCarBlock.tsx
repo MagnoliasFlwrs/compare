@@ -1,7 +1,17 @@
 /**
- * Одна половина таблицы сравнения (50% ширины): шапка с ценами по агрегатам,
- * строка комплектаций с чекбоксами, тело — характеристики.
- * Слева фиксированная колонка первая, справа — последняя.
+ * Одна половина таблицы сравнения (левая или правая, ~50% ширины).
+ *
+ * Отображает:
+ * - шапку с моделью / поколением;
+ * - строки цен по силовым агрегатам × видимые комплектации;
+ * - строку заголовков комплектаций (скрытие столбца);
+ * - тело — характеристики в общем порядке с другой половиной.
+ *
+ * Расчёт «преимуществ» здесь НЕ выполняется. Чекбокс «оставить преимущества»
+ * меняет только UI-состояние; фильтрация строк делается в CompareTableView
+ * (filterDisplayRows → compareDisplayRows.ts → compareAdvantage.ts).
+ *
+ * Порядок колонок: слева [фиксированная | комплектации], справа [комплектации | фиксированная].
  */
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { CloseOutlined } from '@ant-design/icons';
@@ -24,25 +34,40 @@ import {
 
 export type { CompareBlockUiState };
 
+/** Форматирование цены в шапке (рубли, без копеек). */
 function formatPrice(value: number): string {
     return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value);
 }
 
 interface Props {
     side: 'left' | 'right';
+    /** Данные одной стороны: комплектации, агрегаты, цены, значения атрибутов. */
     data: CompareTableSide;
+    /** Локальное UI блока: фильтры, скрытые комплектации, выбранный кузов. */
     ui: CompareBlockUiState;
     onUiChange: (patch: Partial<CompareBlockUiState>) => void;
+    /**
+     * Число строк цен в thead: max(агрегаты слева, агрегаты справа, 1).
+     * У стороны с меньшим числом агрегатов добавляются пустые строки для выравнивания tbody.
+     */
+    alignedPriceRowCount: number;
+    /**
+     * Общий список строк для обеих половин (ключ + подпись).
+     * Строится в CompareTableView после фильтра «оставить преимущества» на каждой стороне.
+     */
     alignedCharRows: AlignedCharRow[];
+    /** Какие строки реально рисовать на ЭТОЙ стороне (после фильтра преимуществ). */
     displayRowsByKey: Map<string, CharRowDef>;
+    /** Синхронный hover строки с противоположным блоком. */
     hoveredRowKey: string | null;
     onHoverRowKey: (key: string | null) => void;
     scrollRef?: React.RefObject<HTMLDivElement | null>;
     onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+    /** Справочники для подписей country / bodyType во встроенных полях specification. */
     specFieldRefs: SpecFieldRefs;
 }
 
-/** Ячейка значения атрибута комплектации (или базового — одно значение на все столбцы). */
+/** Ячейка значения доп. атрибута; для BOOLEAN «да» показываем «+». */
 function TrimValueCell({
     attribute,
     value,
@@ -65,6 +90,7 @@ const CompareCarBlock: React.FC<Props> = ({
     data,
     ui,
     onUiChange,
+    alignedPriceRowCount,
     alignedCharRows,
     displayRowsByKey,
     hoveredRowKey,
@@ -77,16 +103,28 @@ const CompareCarBlock: React.FC<Props> = ({
     const headerRef = useRef<HTMLTableSectionElement>(null);
     const [stickyTops, setStickyTops] = React.useState<number[]>([]);
 
+    /** Комплектации, не скрытые кнопкой «×» в заголовке столбца. */
     const visibleTrims = useMemo(
         () => data.trims.filter((t) => !ui.hiddenTrimIds.has(t.id)),
         [data.trims, ui.hiddenTrimIds],
     );
     const trimColCount = Math.max(visibleTrims.length, 1);
-    // Строки thead: по одной на силовой агрегат (цены) + строка заголовков комплектаций
-    const powertrainRows = data.powertrains.length > 0 ? data.powertrains : null;
-    const headerRowCount = (powertrainRows?.length ?? 1) + 1;
 
-    // Смещения для position:sticky в шапке при вертикальном скролле
+    /**
+     * Слоты строк цен: реальный агрегат или null (пустая строка для выравнивания с другой стороной).
+     */
+    const priceRowSlots = useMemo(() => {
+        const slots: Array<(typeof data.powertrains)[number] | null> = [];
+        for (let i = 0; i < alignedPriceRowCount; i++) {
+            slots.push(data.powertrains[i] ?? null);
+        }
+        return slots;
+    }, [data.powertrains, alignedPriceRowCount]);
+
+    /** Строки thead: цены (alignedPriceRowCount) + строка названий комплектаций. */
+    const headerRowCount = alignedPriceRowCount + 1;
+
+    /** Вертикальный sticky в шапке: накапливаем top по высоте каждой строки thead. */
     useLayoutEffect(() => {
         const thead = headerRef.current;
         if (!thead) return;
@@ -98,7 +136,7 @@ const CompareCarBlock: React.FC<Props> = ({
             offset += row.getBoundingClientRect().height;
         });
         setStickyTops(tops);
-    }, [headerRowCount, visibleTrims.length, data.powertrains.length]);
+    }, [headerRowCount, visibleTrims.length, alignedPriceRowCount]);
 
     const hideTrim = (trimId: string) => {
         const next = new Set(ui.hiddenTrimIds);
@@ -120,16 +158,20 @@ const CompareCarBlock: React.FC<Props> = ({
         };
     };
 
+    /** Активный вариант кузова (specification) для базовых характеристик и их значений. */
     const activeSpec = resolveActiveSpecification(data, ui);
 
-    // Фиксированная ячейка: чекбоксы, выбор варианта кузова (если несколько specifications)
+    /**
+     * Фиксированная колонка в шапке: выбор кузова, чекбоксы фильтров.
+     * «оставить преимущества» — см. CompareTableView + compareDisplayRows.filterDisplayRows.
+     */
     const controlsCell = (rowIndex: number) => (
         <td
             className="compare-col-fixed compare-col-fixed--controls"
             style={stickyStyle(rowIndex)}
         >
             <div className="compare-controls-inline no-print">
-                {data.specifications.length > 1 ? (
+                {/* {data.specifications.length > 1 ? (
                     <Select
                         size="small"
                         className="compare-spec-select"
@@ -141,7 +183,7 @@ const CompareCarBlock: React.FC<Props> = ({
                         onChange={(id) => onUiChange({ selectedSpecificationId: id })}
                         disabled={!ui.showBaseCharacteristics}
                     />
-                ) : null}
+                ) : null} */}
                 <Checkbox
                     checked={ui.keepAdvantages}
                     onChange={(e) => onUiChange({ keepAdvantages: e.target.checked })}
@@ -156,20 +198,13 @@ const CompareCarBlock: React.FC<Props> = ({
                 >
                     отобразить базовые хар-ки
                 </Checkbox>
-                {ui.hiddenTrimIds.size > 0 ? (
-                    <Button
-                        type="link"
-                        size="small"
-                        className="compare-show-all-trims"
-                        onClick={showAllTrims}
-                    >
-                        показать все комплектации
-                    </Button>
-                ) : null}
             </div>
         </td>
     );
 
+    /**
+     * Ячейки комплектаций в шапке: клонируем узел от factory и добавляем sticky + класс.
+     */
     const renderTrimCellsSimple = (
         factory: (trim: (typeof visibleTrims)[0]) => React.ReactNode,
         rowIndex: number,
@@ -203,7 +238,6 @@ const CompareCarBlock: React.FC<Props> = ({
         });
     };
 
-    // Порядок колонок: слева [фикс | комплектации], справа [комплектации | фикс]
     const orderCells = (fixed: React.ReactNode, trimCells: React.ReactNode) =>
         isLeft ? (
             <>
@@ -217,18 +251,23 @@ const CompareCarBlock: React.FC<Props> = ({
             </>
         );
 
+    /** Значение доп. атрибута комплектации (trim). */
     const getTrimAttributeValue = (
         attribute: Attribute,
         trimId: string,
     ): EntityAttributeValue | undefined =>
         data.valuesByTrimId[trimId]?.[attribute.id];
 
+    /** Значение доп. атрибута базового блока (specification) — одно на все столбцы trim. */
     const getSpecAttributeValue = (attribute: Attribute): EntityAttributeValue | undefined => {
         if (!activeSpec) return undefined;
         return data.specValuesBySpecId[activeSpec.id]?.[attribute.id];
     };
 
-    // Базовая характеристика из полей specification (длина, бак…) — одинаково во всех столбцах
+    /**
+     * Встроенное поле specification (длина, бак…): одно значение дублируется
+     * во все видимые столбцы комплектаций.
+     */
     const renderSpecFieldCells = (fieldKey: SpecBuiltInFieldKey) => {
         if (!activeSpec) {
             return <td className="compare-col-trim">—</td>;
@@ -282,68 +321,53 @@ const CompareCarBlock: React.FC<Props> = ({
                         {!isLeft ? <col className="compare-col-fixed" /> : null}
                     </colgroup>
                     <thead ref={headerRef} className="compare-sticky-head">
-                        {powertrainRows
-                            ? powertrainRows.map((pt) => {
-                                  const rowIdx = headerRowIndex++;
-                                  // Слева/справа: подпись агрегата (мотор, мощность — без name)
-                                  const fixed = (
-                                      <td
-                                          className="compare-col-fixed compare-col-fixed--dark"
-                                          style={stickyStyle(rowIdx)}
-                                      >
-                                          {formatPowertrainLabel(pt)}
-                                      </td>
-                                  );
-                                  const trimCells = renderTrimCellsSimple(
-                                      (trim) => {
-                                          const key = getCarPriceCellKey(pt.id, trim.id);
-                                          const cell = data.priceByCell[key];
-                                          return (
-                                              <td className="compare-col-trim compare-col-trim--dark">
-                                                  {cell ? (
-                                                      formatPrice(cell.price)
-                                                  ) : (
-                                                      <span className="compare-price-empty">
-                                                          —
-                                                      </span>
-                                                  )}
-                                              </td>
-                                          );
-                                      },
-                                      rowIdx,
-                                      'compare-col-trim--dark',
-                                  );
-                                  return (
-                                      <tr key={pt.id} className="row-price">
-                                          {orderCells(fixed, trimCells)}
-                                      </tr>
-                                  );
-                              })
-                            : (() => {
-                                  const rowIdx = headerRowIndex++;
-                                  return (
-                                      <tr className="row-price">
-                                          {orderCells(
-                                              <td
-                                                  className="compare-col-fixed compare-col-fixed--dark"
-                                                  style={stickyStyle(rowIdx)}
-                                              >
-                                                  —
-                                              </td>,
-                                              renderTrimCellsSimple(
-                                                  () => (
-                                                      <td className="compare-col-trim compare-col-trim--dark">
-                                                          —
-                                                      </td>
-                                                  ),
-                                                  rowIdx,
-                                                  'compare-col-trim--dark',
-                                              ),
-                                          )}
-                                      </tr>
-                                  );
-                              })()}
-                        {/* Названия комплектаций и кнопка скрытия столбца */}
+                        {/* Цены: строка на слот (агрегат или пустой заполнитель для выравнивания шапки). */}
+                        {priceRowSlots.map((pt, slotIndex) => {
+                            const rowIdx = headerRowIndex++;
+                            const fixed = (
+                                <td
+                                    className="compare-col-fixed compare-col-fixed--dark"
+                                    style={stickyStyle(rowIdx)}
+                                >
+                                    {pt ? formatPowertrainLabel(pt) : '—'}
+                                </td>
+                            );
+                            const trimCells = renderTrimCellsSimple(
+                                (trim) => {
+                                    if (!pt) {
+                                        return (
+                                            <td className="compare-col-trim compare-col-trim--dark">
+                                                <span className="compare-price-empty">—</span>
+                                            </td>
+                                        );
+                                    }
+                                    const key = getCarPriceCellKey(pt.id, trim.id);
+                                    const cell = data.priceByCell[key];
+                                    return (
+                                        <td className="compare-col-trim compare-col-trim--dark">
+                                            {cell ? (
+                                                formatPrice(cell.price)
+                                            ) : (
+                                                <span className="compare-price-empty">—</span>
+                                            )}
+                                        </td>
+                                    );
+                                },
+                                rowIdx,
+                                'compare-col-trim--dark',
+                            );
+                            return (
+                                <tr
+                                    key={pt?.id ?? `price-spacer-${slotIndex}`}
+                                    className={
+                                        pt ? 'row-price' : 'row-price row-price--spacer'
+                                    }
+                                >
+                                    {orderCells(fixed, trimCells)}
+                                </tr>
+                            );
+                        })}
+                        {/* Названия комплектаций и скрытие столбца. */}
                         <tr className="row-trim-header">
                             {orderCells(
                                 controlsCell(headerRowIndex),
@@ -368,7 +392,11 @@ const CompareCarBlock: React.FC<Props> = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {/* Строки характеристик: общий порядок с другой половиной (alignedCharRows) */}
+                        {/*
+                         * Строки характеристик: идём по alignedCharRows (общий порядок).
+                         * displayRowsByKey — есть ли строка на этой стороне после фильтра преимуществ.
+                         * Если ключа нет в map — пустые «—» (строка есть только у соперника).
+                         */}
                         {alignedCharRows.length === 0 ? (
                             <tr className="row-char">
                                 {orderCells(

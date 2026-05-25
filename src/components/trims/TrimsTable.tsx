@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
 import { Button, ConfigProvider, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ruRU from 'antd/locale/ru_RU';
 import type { Trim, TrimsListMeta, TrimsQuery } from '../../stores/trimsStore';
+import { sortByOrder } from '../../utils/sortByOrder';
 
 interface Props {
     data: Trim[];
@@ -26,6 +27,8 @@ const TrimsTable: React.FC<Props> = ({
     onManageAttributes,
     onDelete,
 }) => {
+    const sortedData = useMemo(() => sortByOrder(data), [data]);
+
     const columns: ColumnsType<Trim> = [
         {
             title: 'Название',
@@ -40,11 +43,15 @@ const TrimsTable: React.FC<Props> = ({
             sorter: (a, b) => (a.order ?? 0) - (b.order ?? 0),
         },
         {
-            title: 'Скрыта',
-            key: 'isHidden',
-            width: 100,
+            title: 'Опубликована',
+            key: 'isPublished',
+            width: 110,
             render: (_, record) =>
-                record.isHidden ? <Tag color="default">Да</Tag> : <Tag color="green">Нет</Tag>,
+                record.isHidden ? (
+                    <Tag color="default">Нет</Tag>
+                ) : (
+                    <Tag color="green">Да</Tag>
+                ),
         },
         {
             title: 'Действия',
@@ -94,7 +101,7 @@ const TrimsTable: React.FC<Props> = ({
             <Table<Trim>
                 rowKey="id"
                 columns={columns}
-                dataSource={data}
+                dataSource={sortedData}
                 loading={loading}
                 pagination={{
                     current: meta?.page ?? query.page,

@@ -4,6 +4,7 @@ import type { Powertrain } from '../../stores/powertrainStore';
 import { useDriveTypesStore } from '../../stores/driveTypesStore';
 import { useEngineTypesStore } from '../../stores/engineTypesStore';
 import { useTransmissionTypesStore } from '../../stores/transmissionTypesStore';
+import { sortByOrder } from '../../utils/sortByOrder';
 
 interface Props {
     powertrains: Powertrain[];
@@ -44,10 +45,7 @@ const PowertrainsGrid: React.FC<Props> = ({ powertrains, loading }) => {
     }, [transmissionTypes]);
 
     const visible = useMemo(
-        () =>
-            [...powertrains]
-                .filter((p) => !p.isHidden)
-                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+        () => sortByOrder(powertrains.filter((p) => !p.isHidden)),
         [powertrains],
     );
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
 import { Button, ConfigProvider, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -9,6 +9,7 @@ import type {
     PowertrainsQuery,
 } from '../../stores/powertrainStore';
 import { useDriveTypesStore } from '../../stores/driveTypesStore';
+import { sortByOrder } from '../../utils/sortByOrder';
 
 interface Props {
     data: Powertrain[];
@@ -43,6 +44,8 @@ const PowertrainsTable: React.FC<Props> = ({
     onManageAttributes,
     onDelete,
 }) => {
+    const sortedData = useMemo(() => sortByOrder(data), [data]);
+
     const driveTypes = useDriveTypesStore((s) => s.driveTypes);
     const driveTypeNameById = React.useMemo(() => {
         const map = new Map<string, string>();
@@ -56,6 +59,12 @@ const PowertrainsTable: React.FC<Props> = ({
             dataIndex: 'name',
             key: 'name',
             ellipsis: true,
+        },
+        {
+            title: 'Порядок',
+            dataIndex: 'order',
+            key: 'order',
+            width: 90,
         },
         {
             title: 'Двигатель',
@@ -106,11 +115,15 @@ const PowertrainsTable: React.FC<Props> = ({
             render: (v) => (v != null ? v : '—'),
         },
         {
-            title: 'Скрыт',
-            key: 'isHidden',
-            width: 90,
+            title: 'Опубликован',
+            key: 'isPublished',
+            width: 110,
             render: (_, record) =>
-                record.isHidden ? <Tag color="default">Да</Tag> : <Tag color="green">Нет</Tag>,
+                record.isHidden ? (
+                    <Tag color="default">Нет</Tag>
+                ) : (
+                    <Tag color="green">Да</Tag>
+                ),
         },
         {
             title: 'Действия',
@@ -160,7 +173,7 @@ const PowertrainsTable: React.FC<Props> = ({
             <Table<Powertrain>
                 rowKey="id"
                 columns={columns}
-                dataSource={data}
+                dataSource={sortedData}
                 loading={loading}
                 scroll={{ x: 1100 }}
                 pagination={{

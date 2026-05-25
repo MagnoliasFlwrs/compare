@@ -1,0 +1,15 @@
+.specification-form--compact.ant-form-vertical .ant-form-item {
+    margin-bottom: 10px;
+}
+
+.specification-form--compact .ant-divider {
+    margin: 10px 0 6px;
+}
+
+.specification-form--compact .ant-divider-inner-text {
+    padding: 0 8px;
+}
+
+.specification-form--compact .ant-row {
+    row-gap: 0;
+}

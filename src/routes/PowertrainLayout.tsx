@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Breadcrumb, Button, Flex, Typography } from 'antd';
 import { Link, useParams } from 'react-router-dom';
@@ -12,28 +12,13 @@ import { useEngineTypesStore } from '../stores/engineTypesStore';
 import { useTransmissionTypesStore } from '../stores/transmissionTypesStore';
 import PowertrainsTable from '../components/powertrain/PowertrainsTable';
 import PowertrainsGrid from '../components/powertrain/PowertrainsGrid';
-import PowertrainFormModal, {
-    type PowertrainFormValues,
-} from '../components/powertrain/PowertrainFormModal';
+import PowertrainFormModal from '../components/powertrain/PowertrainFormModal';
 import EntityAttributesModal from '../components/entityAttributes/EntityAttributesModal';
 
 function jwtRole(user: unknown): string | undefined {
     if (!user || typeof user !== 'object') return undefined;
     const r = (user as { role?: unknown }).role;
     return typeof r === 'string' ? r : undefined;
-}
-
-/** id-шник может приходить строкой или вложенным объектом — аккуратно достаём строковый UUID. */
-function pickIdString(value: unknown): string {
-    if (typeof value === 'string') return value;
-    if (value && typeof value === 'object') {
-        const v = value as Record<string, unknown>;
-        for (const key of ['id', 'value', 'uuid']) {
-            const candidate = v[key];
-            if (typeof candidate === 'string') return candidate;
-        }
-    }
-    return '';
 }
 
 const PowertrainLayout = () => {
@@ -51,8 +36,6 @@ const PowertrainLayout = () => {
     const powertrainsObj = usePowertrainStore((s) => s.powertrainsObj);
     const loading = usePowertrainStore((s) => s.loading);
     const getPowertrains = usePowertrainStore((s) => s.getPowertrains);
-    const createPowertrain = usePowertrainStore((s) => s.createPowertrain);
-    const updatePowertrainById = usePowertrainStore((s) => s.updatePowertrainById);
     const deletePowertrainById = usePowertrainStore((s) => s.deletePowertrainById);
     const filterByGeneration = usePowertrainStore((s) => s.filterByGeneration);
     const resetFilter = usePowertrainStore((s) => s.resetFilter);
@@ -64,8 +47,6 @@ const PowertrainLayout = () => {
     const currentGeneration = useGenerationStore((s) => s.currentGeneration);
     const getGenerationById = useGenerationStore((s) => s.getGenerationById);
 
-    // Справочники нужны для отображения названий в таблице/карточках.
-    // Лениво подгружаем один раз, если пустые.
     const driveTypes = useDriveTypesStore((s) => s.driveTypes);
     const getDriveTypes = useDriveTypesStore((s) => s.getDriveTypes);
     const engineTypes = useEngineTypesStore((s) => s.engineTypes);
@@ -73,10 +54,8 @@ const PowertrainLayout = () => {
     const transmissionTypes = useTransmissionTypesStore((s) => s.transmissionTypes);
     const getTransmissionTypes = useTransmissionTypesStore((s) => s.getTransmissionTypes);
 
-    const [addOpen, setAddOpen] = useState(false);
-    const [addSubmitting, setAddSubmitting] = useState(false);
-    const [editPt, setEditPt] = useState<Powertrain | null>(null);
-    const [editSubmitting, setEditSubmitting] = useState(false);
+    const [formOpen, setFormOpen] = useState(false);
+    const [formEditing, setFormEditing] = useState<Powertrain | null>(null);
     const [attrsPt, setAttrsPt] = useState<Powertrain | null>(null);
 
     useEffect(() => {
@@ -114,37 +93,19 @@ const PowertrainLayout = () => {
         }
     }, []);
 
-    const onAddSubmit = async (values: PowertrainFormValues) => {
-        if (!generationId) return;
-        setAddSubmitting(true);
-        try {
-            await createPowertrain({
-                generationId,
-                ...values,
-            });
-            message.success('Силовой агрегат создан');
-            setAddOpen(false);
-        } catch {
-            message.error('Не удалось создать силовой агрегат');
-            throw new Error('create failed');
-        } finally {
-            setAddSubmitting(false);
-        }
+    const openCreateForm = () => {
+        setFormEditing(null);
+        setFormOpen(true);
     };
 
-    const onEditSubmit = async (values: PowertrainFormValues) => {
-        if (!editPt) return;
-        setEditSubmitting(true);
-        try {
-            await updatePowertrainById(editPt.id, values);
-            message.success('Силовой агрегат обновлён');
-            setEditPt(null);
-        } catch {
-            message.error('Не удалось обновить силовой агрегат');
-            throw new Error('update failed');
-        } finally {
-            setEditSubmitting(false);
-        }
+    const openEditForm = (pt: Powertrain) => {
+        setFormEditing(pt);
+        setFormOpen(true);
+    };
+
+    const closeForm = () => {
+        setFormOpen(false);
+        setFormEditing(null);
     };
 
     const onDelete = async (record: Powertrain) => {
@@ -162,29 +123,6 @@ const PowertrainLayout = () => {
             message.error('Не удалось загрузить силовые агрегаты');
         });
     };
-
-    const editInitialValues = useMemo<PowertrainFormValues | undefined>(
-        () =>
-            editPt
-                ? {
-                      name: editPt.name,
-                      isHidden: editPt.isHidden,
-                      order: editPt.order ?? 0,
-                      engine: editPt.engine ?? '',
-                      engineTypeId: pickIdString(editPt.engineTypeId),
-                      enginePower: editPt.enginePower ?? 0,
-                      transmission: editPt.transmission ?? '',
-                      transmissionTypeId: pickIdString(editPt.transmissionTypeId),
-                      numOfGears: editPt.numOfGears ?? 0,
-                      driveTypeId: pickIdString(editPt.driveTypeId),
-                      acceleration: editPt.acceleration ?? 0,
-                      consumption: editPt.consumption ?? 0,
-                      numOfSeats: editPt.numOfSeats ?? 0,
-                      note: editPt.note ?? '',
-                  }
-                : undefined,
-        [editPt],
-    );
 
     const enc = encodeURIComponent;
     const breadcrumb = brandId && modelId && generationId ? (
@@ -226,7 +164,7 @@ const PowertrainLayout = () => {
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={() => setAddOpen(true)}
+                        onClick={openCreateForm}
                     >
                         Добавить
                     </Button>
@@ -246,33 +184,17 @@ const PowertrainLayout = () => {
                     meta={meta}
                     query={powertrainsObj}
                     onPageChange={onPageChange}
-                    onEdit={setEditPt}
+                    onEdit={openEditForm}
                     onManageAttributes={setAttrsPt}
                     onDelete={onDelete}
                 />
 
                 <PowertrainFormModal
-                    key="powertrain-add"
-                    title="Новый силовой агрегат"
-                    open={addOpen}
-                    submitting={addSubmitting}
-                    submitText="Создать"
-                    seedKey="add"
+                    open={formOpen}
+                    editing={formEditing}
+                    generationId={generationId ?? null}
                     defaultOrder={powertrains.length}
-                    onCancel={() => setAddOpen(false)}
-                    onSubmit={onAddSubmit}
-                />
-
-                <PowertrainFormModal
-                    key={editPt?.id ?? 'powertrain-edit'}
-                    title={editPt ? `Редактирование: ${editPt.name}` : 'Редактирование'}
-                    open={!!editPt}
-                    submitting={editSubmitting}
-                    submitText="Сохранить"
-                    seedKey={editPt?.id}
-                    initialValues={editInitialValues}
-                    onCancel={() => setEditPt(null)}
-                    onSubmit={onEditSubmit}
+                    onClose={closeForm}
                 />
 
                 <EntityAttributesModal

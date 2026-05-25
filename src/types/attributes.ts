@@ -68,11 +68,17 @@ export interface UpdateAttributeOptionPayload {
     value: string;
 }
 
+export type AttributeFormOptionItem = {
+    id?: string;
+    value: string;
+    order: number;
+};
+
 export type AttributeFormValues = {
     name: string;
     category: AttributeCategory;
     type: AttributeType;
     unit: string;
     advantageType: AdvantageType;
-    options?: { value: string; order: number }[];
+    options?: AttributeFormOptionItem[];
 };

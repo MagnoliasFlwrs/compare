@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Breadcrumb, Button, Flex, Typography } from 'antd';
 import { Link, useParams } from 'react-router-dom';
@@ -12,32 +12,13 @@ import { useModelStore } from '../stores/modelsStore';
 import { useGenerationStore } from '../stores/generationStore';
 import SpecificationsTable from '../components/specifications/SpecificationsTable';
 import SpecificationsGrid from '../components/specifications/SpecificationsGrid';
-import SpecificationFormModal, {
-    type SpecificationFormValues,
-} from '../components/specifications/SpecificationFormModal';
+import SpecificationFormModal from '../components/specifications/SpecificationFormModal';
 import EntityAttributesModal from '../components/entityAttributes/EntityAttributesModal';
 
 function jwtRole(user: unknown): string | undefined {
     if (!user || typeof user !== 'object') return undefined;
     const r = (user as { role?: unknown }).role;
     return typeof r === 'string' ? r : undefined;
-}
-
-/**
- * Бэк отдаёт countryId/bodyTypeId в GET как объект ({}), а в POST/PUT ожидает строку.
- * При предзаполнении формы редактирования аккуратно извлекаем строковый id,
- * иначе подсовываем пусто и пользователь сам введёт UUID.
- */
-function pickIdString(value: unknown): string {
-    if (typeof value === 'string') return value;
-    if (value && typeof value === 'object') {
-        const v = value as Record<string, unknown>;
-        for (const key of ['id', 'value', 'uuid']) {
-            const candidate = v[key];
-            if (typeof candidate === 'string') return candidate;
-        }
-    }
-    return '';
 }
 
 const SpecificationsLayout = () => {
@@ -55,10 +36,6 @@ const SpecificationsLayout = () => {
     const specificationsObj = useSpecificationStore((s) => s.specificationsObj);
     const loading = useSpecificationStore((s) => s.loading);
     const getSpecifications = useSpecificationStore((s) => s.getSpecifications);
-    const createSpecification = useSpecificationStore((s) => s.createSpecification);
-    const updateSpecificationById = useSpecificationStore(
-        (s) => s.updateSpecificationById,
-    );
     const deleteSpecificationById = useSpecificationStore(
         (s) => s.deleteSpecificationById,
     );
@@ -72,21 +49,17 @@ const SpecificationsLayout = () => {
     const currentGeneration = useGenerationStore((s) => s.currentGeneration);
     const getGenerationById = useGenerationStore((s) => s.getGenerationById);
 
-    const [addOpen, setAddOpen] = useState(false);
-    const [addSubmitting, setAddSubmitting] = useState(false);
-    const [editSpec, setEditSpec] = useState<Specification | null>(null);
-    const [editSubmitting, setEditSubmitting] = useState(false);
+    const [formOpen, setFormOpen] = useState(false);
+    const [formEditing, setFormEditing] = useState<Specification | null>(null);
     const [attrsSpec, setAttrsSpec] = useState<Specification | null>(null);
 
     useEffect(() => {
         if (!generationId) return;
         filterByGeneration(generationId);
         getSpecifications({ page: 1, generationId }).catch(() => {
-            message.error('Не удалось загрузить характеристики');
+            message.error('Не удалось загрузить варианты кузова');
         });
         return () => {
-            // Чистим фильтр стора, чтобы следующая страница (другая генерация)
-            // не унаследовала старый filter.generationId в первом запросе.
             resetFilter();
         };
     }, [generationId]);
@@ -103,74 +76,36 @@ const SpecificationsLayout = () => {
         if (generationId) getGenerationById(generationId).catch(() => {});
     }, [generationId, getGenerationById]);
 
-    const onAddSubmit = async (values: SpecificationFormValues) => {
-        if (!generationId) return;
-        setAddSubmitting(true);
-        try {
-            await createSpecification({
-                generationId,
-                ...values,
-            });
-            message.success('Характеристика создана');
-            setAddOpen(false);
-        } catch {
-            message.error('Не удалось создать характеристику');
-        } finally {
-            setAddSubmitting(false);
-        }
+    const openCreateForm = () => {
+        setFormEditing(null);
+        setFormOpen(true);
     };
 
-    const onEditSubmit = async (values: SpecificationFormValues) => {
-        if (!editSpec) return;
-        setEditSubmitting(true);
-        try {
-            await updateSpecificationById(editSpec.id, values);
-            message.success('Характеристика обновлена');
-            setEditSpec(null);
-        } catch {
-            message.error('Не удалось обновить характеристику');
-        } finally {
-            setEditSubmitting(false);
-        }
+    const openEditForm = (spec: Specification) => {
+        setFormEditing(spec);
+        setFormOpen(true);
+    };
+
+    const closeForm = () => {
+        setFormOpen(false);
+        setFormEditing(null);
     };
 
     const onDelete = async (record: Specification) => {
         try {
             await deleteSpecificationById(record.id);
-            message.success('Характеристика удалена');
+            message.success('Вариант кузова удалён');
         } catch {
-            message.error('Не удалось удалить характеристику');
+            message.error('Не удалось удалить вариант кузова');
         }
     };
 
     const onPageChange = (page: number, limit: number) => {
         if (!generationId) return;
         getSpecifications({ page, limit, generationId }).catch(() => {
-            message.error('Не удалось загрузить характеристики');
+            message.error('Не удалось загрузить варианты кузова');
         });
     };
-
-    const editInitialValues = useMemo<SpecificationFormValues | undefined>(
-        () =>
-            editSpec
-                ? {
-                      name: editSpec.name,
-                      isHidden: editSpec.isHidden,
-                      length: editSpec.length,
-                      width: editSpec.width,
-                      height: editSpec.height,
-                      wheelbase: editSpec.wheelbase,
-                      clearance: editSpec.clearance,
-                      tank: editSpec.tank,
-                      trunkStandardVolume: editSpec.trunkStandardVolume,
-                      trunkMaximumVolume: editSpec.trunkMaximumVolume,
-                      countryId: pickIdString(editSpec.countryId),
-                      bodyTypeId: pickIdString(editSpec.bodyTypeId),
-                      warranty: editSpec.warranty ?? '',
-                  }
-                : undefined,
-        [editSpec],
-    );
 
     const enc = encodeURIComponent;
     const breadcrumb = brandId && modelId && generationId ? (
@@ -212,7 +147,7 @@ const SpecificationsLayout = () => {
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={() => setAddOpen(true)}
+                        onClick={openCreateForm}
                     >
                         Добавить
                     </Button>
@@ -232,32 +167,16 @@ const SpecificationsLayout = () => {
                     meta={meta}
                     query={specificationsObj}
                     onPageChange={onPageChange}
-                    onEdit={setEditSpec}
+                    onEdit={openEditForm}
                     onManageAttributes={setAttrsSpec}
                     onDelete={onDelete}
                 />
 
                 <SpecificationFormModal
-                    key="spec-add"
-                    title="Новая характеристика"
-                    open={addOpen}
-                    submitting={addSubmitting}
-                    submitText="Создать"
-                    seedKey="add"
-                    onCancel={() => setAddOpen(false)}
-                    onSubmit={onAddSubmit}
-                />
-
-                <SpecificationFormModal
-                    key={editSpec?.id ?? 'spec-edit'}
-                    title={editSpec ? `Редактирование: ${editSpec.name}` : 'Редактирование'}
-                    open={!!editSpec}
-                    submitting={editSubmitting}
-                    submitText="Сохранить"
-                    seedKey={editSpec?.id}
-                    initialValues={editInitialValues}
-                    onCancel={() => setEditSpec(null)}
-                    onSubmit={onEditSubmit}
+                    open={formOpen}
+                    editing={formEditing}
+                    generationId={generationId ?? null}
+                    onClose={closeForm}
                 />
 
                 <EntityAttributesModal

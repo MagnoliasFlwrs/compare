@@ -16,12 +16,21 @@
     align-items: flex-start;
 }
 
+.compare-side-table thead tr.row-price td {
+    height: 40px;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+.compare-side-table thead tr.row-price.row-price--spacer td {
+    color: rgba(255, 255, 255, 0.35);
+}
+
 .compare-car-block {
     flex: 0 0 50%;
     width: 50%;
     max-width: 50%;
     box-sizing: border-box;
-    padding: 0 12px;
 }
 
 .compare-car-block.compare-block--left {

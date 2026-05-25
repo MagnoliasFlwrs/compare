@@ -35,6 +35,7 @@ export function detailedValueToEntity(v: GenerationDetailedValue): EntityAttribu
         id: v.id,
         attributeId: v.attributeId ?? v.attribute?.id,
         optionId: v.optionId ?? v.option?.id,
+        option: v.option,
         rangeFrom: v.rangeFrom,
         rangeTo: v.rangeTo,
         valueBoolean: v.valueBoolean,

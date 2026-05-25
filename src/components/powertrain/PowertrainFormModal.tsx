@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+    App,
     Button,
-    Checkbox,
     Col,
     Divider,
     Form,
@@ -11,73 +11,53 @@ import {
     Row,
     Select,
     Space,
+    Switch,
     Typography,
 } from 'antd';
+import type { Powertrain } from '../../stores/powertrainStore';
+import { usePowertrainStore } from '../../stores/powertrainStore';
 import { useDriveTypesStore } from '../../stores/driveTypesStore';
 import { useEngineTypesStore } from '../../stores/engineTypesStore';
 import { useTransmissionTypesStore } from '../../stores/transmissionTypesStore';
+import { buildDriveTypeSelectOptions } from './powertrainFormConstants';
+import {
+    enginePowerRules,
+    numOfGearsRules,
+    oneDecimalRule,
+} from './powertrainFormValidation';
+import {
+    normalizePowertrainFormValues,
+    powertrainFormDefaults,
+    powertrainToFormValues,
+    type PowertrainFormValues,
+} from './powertrainFormUtils';
+import '../specifications/specificationForm.css';
 
-export type PowertrainFormValues = {
-    name: string;
-    isHidden: boolean;
-    order: number;
-    engine: string;
-    engineTypeId: string;
-    enginePower: number;
-    transmission: string;
-    transmissionTypeId: string;
-    numOfGears: number;
-    driveTypeId: string;
-    acceleration: number;
-    consumption: number;
-    numOfSeats: number;
-    note: string;
-};
+export type { PowertrainFormValues };
 
 interface Props {
-    title: string;
     open: boolean;
-    submitting: boolean;
-    submitText: string;
-    /** Меняется только при смене редактируемой записи — не на каждый ре-рендер родителя */
-    seedKey?: string;
+    editing: Powertrain | null;
+    generationId: string | null;
     defaultOrder?: number;
-    initialValues?: PowertrainFormValues;
-    onCancel: () => void;
-    onSubmit: (values: PowertrainFormValues) => Promise<void> | void;
+    onClose: () => void;
+    onSaved?: () => void;
 }
 
-const DEFAULT_VALUES: PowertrainFormValues = {
-    name: '',
-    isHidden: false,
-    order: 0,
-    engine: '',
-    engineTypeId: '',
-    enginePower: 0,
-    transmission: '',
-    transmissionTypeId: '',
-    numOfGears: 0,
-    driveTypeId: '',
-    acceleration: 0,
-    consumption: 0,
-    numOfSeats: 0,
-    note: '',
-};
-
 const PowertrainFormModal: React.FC<Props> = ({
-    title,
     open,
-    submitting,
-    submitText,
-    seedKey = 'add',
+    editing,
+    generationId,
     defaultOrder = 0,
-    initialValues,
-    onCancel,
-    onSubmit,
+    onClose,
+    onSaved,
 }) => {
+    const { message } = App.useApp();
+    const createPowertrain = usePowertrainStore((s) => s.createPowertrain);
+    const updatePowertrainById = usePowertrainStore((s) => s.updatePowertrainById);
+
     const [form] = Form.useForm<PowertrainFormValues>();
-    const prevOpenRef = useRef(false);
-    const lastSeedKeyRef = useRef<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
     const driveTypes = useDriveTypesStore((s) => s.driveTypes);
     const driveTypesLoading = useDriveTypesStore((s) => s.loading);
@@ -91,26 +71,29 @@ const PowertrainFormModal: React.FC<Props> = ({
     const transmissionTypesLoading = useTransmissionTypesStore((s) => s.loading);
     const getTransmissionTypes = useTransmissionTypesStore((s) => s.getTransmissionTypes);
 
-    // Заполняем форму только при открытии или смене seedKey (id записи при редактировании).
-    // Не зависим от initialValues по ссылке — родитель мог бы передавать новый {} каждый рендер.
+    const isEdit = editing !== null;
+
+    const title = useMemo(
+        () =>
+            isEdit
+                ? `Редактирование: ${editing.name}`
+                : 'Новый силовой агрегат',
+        [isEdit, editing],
+    );
+
+    const submitText = isEdit ? 'Сохранить' : 'Создать';
+
     useEffect(() => {
         if (!open) {
-            prevOpenRef.current = false;
-            lastSeedKeyRef.current = null;
+            form.resetFields();
             return;
         }
-
-        const justOpened = !prevOpenRef.current;
-        const seedChanged = lastSeedKeyRef.current !== seedKey;
-        prevOpenRef.current = true;
-        lastSeedKeyRef.current = seedKey;
-
-        if (justOpened || seedChanged) {
-            form.setFieldsValue(
-                initialValues ?? { ...DEFAULT_VALUES, order: defaultOrder },
-            );
+        if (editing) {
+            form.setFieldsValue(powertrainToFormValues(editing));
+        } else {
+            form.setFieldsValue(powertrainFormDefaults(defaultOrder));
         }
-    }, [open, seedKey, defaultOrder, initialValues, form]);
+    }, [open, editing, defaultOrder, form]);
 
     useEffect(() => {
         if (!open) return;
@@ -126,13 +109,15 @@ const PowertrainFormModal: React.FC<Props> = ({
     }, [open, getDriveTypes, getEngineTypes, getTransmissionTypes]);
 
     const driveTypeOptions = useMemo(
-        () => driveTypes.map((d) => ({ value: d.id, label: d.name })),
+        () => buildDriveTypeSelectOptions(driveTypes),
         [driveTypes],
     );
+
     const engineTypeOptions = useMemo(
         () => engineTypes.map((d) => ({ value: d.id, label: d.name })),
         [engineTypes],
     );
+
     const transmissionTypeOptions = useMemo(
         () => transmissionTypes.map((d) => ({ value: d.id, label: d.name })),
         [transmissionTypes],
@@ -140,8 +125,41 @@ const PowertrainFormModal: React.FC<Props> = ({
 
     const handleCancel = () => {
         form.resetFields();
-        onCancel();
+        onClose();
     };
+
+    const onCreate = async (values: PowertrainFormValues) => {
+        if (!generationId) return;
+        setSubmitting(true);
+        try {
+            const payload = normalizePowertrainFormValues(values);
+            await createPowertrain({ generationId, ...payload });
+            message.success('Силовой агрегат создан');
+            handleCancel();
+            onSaved?.();
+        } catch {
+            message.error('Не удалось создать силовой агрегат');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const onUpdate = async (values: PowertrainFormValues) => {
+        if (!editing) return;
+        setSubmitting(true);
+        try {
+            await updatePowertrainById(editing.id, normalizePowertrainFormValues(values));
+            message.success('Силовой агрегат обновлён');
+            handleCancel();
+            onSaved?.();
+        } catch {
+            message.error('Не удалось обновить силовой агрегат');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const onSubmit = isEdit ? onUpdate : onCreate;
 
     return (
         <Modal
@@ -149,38 +167,17 @@ const PowertrainFormModal: React.FC<Props> = ({
             open={open}
             onCancel={handleCancel}
             footer={null}
-            destroyOnClose={false}
-            width={760}
+            destroyOnHidden
+            width={800}
         >
-            <Form<PowertrainFormValues>
+            <Form
                 form={form}
                 layout="vertical"
-                preserve
-                onFinish={async (values) => {
-                    const payload: PowertrainFormValues = {
-                        name: values.name.trim(),
-                        isHidden: Boolean(values.isHidden),
-                        order: Number(values.order ?? 0),
-                        engine: (values.engine ?? '').trim(),
-                        engineTypeId: (values.engineTypeId ?? '').trim(),
-                        enginePower: Number(values.enginePower ?? 0),
-                        transmission: (values.transmission ?? '').trim(),
-                        transmissionTypeId: (values.transmissionTypeId ?? '').trim(),
-                        numOfGears: Number(values.numOfGears ?? 0),
-                        driveTypeId: (values.driveTypeId ?? '').trim(),
-                        acceleration: Number(values.acceleration ?? 0),
-                        consumption: Number(values.consumption ?? 0),
-                        numOfSeats: Number(values.numOfSeats ?? 0),
-                        note: (values.note ?? '').trim(),
-                    };
-                    try {
-                        await onSubmit(payload);
-                    } catch {
-                        form.setFieldsValue(payload);
-                    }
-                }}
+            
+                className="specification-form--compact"
+                onFinish={onSubmit}
             >
-                <Row gutter={12}>
+                <Row gutter={[12, 0]}>
                     <Col xs={24} sm={16}>
                         <Form.Item
                             label="Название"
@@ -200,15 +197,24 @@ const PowertrainFormModal: React.FC<Props> = ({
                 <Divider orientation="left" plain>
                     <Typography.Text type="secondary">Двигатель</Typography.Text>
                 </Divider>
-                <Row gutter={12}>
+                <Row gutter={[12, 0]}>
                     <Col xs={24} sm={12}>
                         <Form.Item label="Двигатель (описание)" name="engine">
                             <Input placeholder="Например: 1.6 MPI" />
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={6}>
-                        <Form.Item label="Мощность, л.с." name="enginePower">
-                            <InputNumber min={0} style={{ width: '100%' }} />
+                        <Form.Item
+                            label="Мощность двигателя"
+                            name="enginePower"
+                            rules={enginePowerRules}
+                        >
+                            <InputNumber
+                                min={0}
+                                style={{ width: '100%' }}
+                                addonAfter="л.с."
+                                placeholder="0"
+                            />
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={6}>
@@ -216,13 +222,10 @@ const PowertrainFormModal: React.FC<Props> = ({
                             <Select
                                 showSearch
                                 allowClear
-                                placeholder="Выберите тип двигателя"
+                                placeholder="Тип"
                                 options={engineTypeOptions}
                                 loading={engineTypesLoading}
                                 optionFilterProp="label"
-                                notFoundContent={
-                                    engineTypesLoading ? 'Загрузка…' : 'Типов двигателя нет'
-                                }
                             />
                         </Form.Item>
                     </Col>
@@ -231,15 +234,21 @@ const PowertrainFormModal: React.FC<Props> = ({
                 <Divider orientation="left" plain>
                     <Typography.Text type="secondary">Трансмиссия и привод</Typography.Text>
                 </Divider>
-                <Row gutter={12}>
+                <Row gutter={[12, 0]}>
                     <Col xs={24} sm={12}>
                         <Form.Item label="Коробка передач (описание)" name="transmission">
                             <Input placeholder="Например: 6MT" />
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={6}>
-                        <Form.Item label="Кол-во передач" name="numOfGears">
-                            <InputNumber min={0} style={{ width: '100%' }} />
+                        <Form.Item label="Кол-во передач" name="numOfGears" rules={numOfGearsRules}>
+                            <InputNumber
+                                min={0}
+                                max={99}
+                                precision={0}
+                                style={{ width: '100%' }}
+                                placeholder="0–99"
+                            />
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={6}>
@@ -247,27 +256,25 @@ const PowertrainFormModal: React.FC<Props> = ({
                             <Select
                                 showSearch
                                 allowClear
-                                placeholder="Выберите тип КПП"
+                                placeholder="Тип КПП"
                                 options={transmissionTypeOptions}
                                 loading={transmissionTypesLoading}
                                 optionFilterProp="label"
-                                notFoundContent={
-                                    transmissionTypesLoading ? 'Загрузка…' : 'Типов КПП нет'
-                                }
                             />
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={12}>
-                        <Form.Item label="Привод" name="driveTypeId">
+                        <Form.Item
+                            label="Привод"
+                            name="driveTypeId"
+                            rules={[{ required: true, message: 'Выберите привод' }]}
+                        >
                             <Select
-                                showSearch
-                                allowClear
-                                placeholder="Выберите тип привода"
+                                placeholder="Выберите привод"
                                 options={driveTypeOptions}
                                 loading={driveTypesLoading}
-                                optionFilterProp="label"
                                 notFoundContent={
-                                    driveTypesLoading ? 'Загрузка…' : 'Типов привода нет'
+                                    driveTypesLoading ? 'Загрузка…' : 'Нет данных справочника'
                                 }
                             />
                         </Form.Item>
@@ -277,30 +284,67 @@ const PowertrainFormModal: React.FC<Props> = ({
                 <Divider orientation="left" plain>
                     <Typography.Text type="secondary">Динамика и комфорт</Typography.Text>
                 </Divider>
-                <Row gutter={12}>
+                <Row gutter={[12, 0]}>
                     <Col xs={24} sm={8}>
-                        <Form.Item label="Разгон 0–100, с" name="acceleration">
-                            <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
+                        <Form.Item
+                            label="Разгон 0–100"
+                            name="acceleration"
+                            rules={[oneDecimalRule('Разгон 0–100')]}
+                        >
+                            <InputNumber
+                                min={0}
+                                step={0.1}
+                                precision={1}
+                                style={{ width: '100%' }}
+                                addonAfter="с"
+                                placeholder="0,0"
+                            />
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={8}>
-                        <Form.Item label="Расход, л/100 км" name="consumption">
-                            <InputNumber min={0} step={0.1} style={{ width: '100%' }} />
+                        <Form.Item
+                            label="Расход"
+                            name="consumption"
+                            rules={[oneDecimalRule('Расход')]}
+                        >
+                            <InputNumber
+                                min={0}
+                                step={0.1}
+                                precision={1}
+                                style={{ width: '100%' }}
+                                addonAfter="л/100 км"
+                                placeholder="0,0"
+                            />
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={8}>
-                        <Form.Item label="Мест" name="numOfSeats">
-                            <InputNumber min={0} style={{ width: '100%' }} />
+                        <Form.Item
+                            label="Кол-во мест"
+                            name="numOfSeats"
+                            rules={[
+                                {
+                                    type: 'number',
+                                    min: 0,
+                                    message: 'Не может быть отрицательным',
+                                },
+                            ]}
+                        >
+                            <InputNumber
+                                min={0}
+                                precision={0}
+                                style={{ width: '100%' }}
+                                placeholder="0"
+                            />
                         </Form.Item>
                     </Col>
                 </Row>
 
                 <Form.Item label="Примечание" name="note">
-                    <Input.TextArea rows={3} placeholder="Доп. информация" />
+                    <Input.TextArea rows={2} placeholder="Доп. информация" />
                 </Form.Item>
 
-                <Form.Item name="isHidden" valuePropName="checked">
-                    <Checkbox>Скрыто</Checkbox>
+                <Form.Item label="Опубликован" name="isPublished" valuePropName="checked">
+                    <Switch checkedChildren="Да" unCheckedChildren="Нет" />
                 </Form.Item>
 
                 <Form.Item style={{ marginBottom: 0 }}>

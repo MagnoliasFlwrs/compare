@@ -245,6 +245,13 @@ const CompareTableView: React.FC<Props> = ({ state }) => {
         return <Typography.Text type="secondary">Нет данных</Typography.Text>;
     }
 
+    /** Одинаковое число строк цен в thead слева и справа (по max силовых агрегатов). */
+    const alignedPriceRowCount = Math.max(
+        left.powertrains.length,
+        right.powertrains.length,
+        1,
+    );
+
     return (
         <div className="compare-print-root" id="compare-print-area">
             <div className="compare-toolbar no-print">
@@ -266,6 +273,7 @@ const CompareTableView: React.FC<Props> = ({ state }) => {
                     data={left}
                     ui={leftUi}
                     onUiChange={patchLeftUi}
+                    alignedPriceRowCount={alignedPriceRowCount}
                     alignedCharRows={alignedCharRows}
                     displayRowsByKey={leftRowsByKey}
                     hoveredRowKey={hoveredRowKey}
@@ -279,6 +287,7 @@ const CompareTableView: React.FC<Props> = ({ state }) => {
                     data={right}
                     ui={rightUi}
                     onUiChange={patchRightUi}
+                    alignedPriceRowCount={alignedPriceRowCount}
                     alignedCharRows={alignedCharRows}
                     displayRowsByKey={rightRowsByKey}
                     hoveredRowKey={hoveredRowKey}

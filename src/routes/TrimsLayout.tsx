@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Breadcrumb, Button, Flex, Typography } from 'antd';
 import { Link, useParams } from 'react-router-dom';
@@ -9,7 +9,7 @@ import { useModelStore } from '../stores/modelsStore';
 import { useGenerationStore } from '../stores/generationStore';
 import TrimsTable from '../components/trims/TrimsTable';
 import TrimsGrid from '../components/trims/TrimsGrid';
-import TrimFormModal, { type TrimFormValues } from '../components/trims/TrimFormModal';
+import TrimFormModal from '../components/trims/TrimFormModal';
 import EntityAttributesModal from '../components/entityAttributes/EntityAttributesModal';
 
 function jwtRole(user: unknown): string | undefined {
@@ -33,8 +33,6 @@ const TrimsLayout = () => {
     const trimsObj = useTrimsStore((s) => s.trimsObj);
     const loading = useTrimsStore((s) => s.loading);
     const getTrims = useTrimsStore((s) => s.getTrims);
-    const createTrim = useTrimsStore((s) => s.createTrim);
-    const updateTrimById = useTrimsStore((s) => s.updateTrimById);
     const deleteTrimById = useTrimsStore((s) => s.deleteTrimById);
     const filterByGeneration = useTrimsStore((s) => s.filterByGeneration);
     const resetFilter = useTrimsStore((s) => s.resetFilter);
@@ -46,10 +44,8 @@ const TrimsLayout = () => {
     const currentGeneration = useGenerationStore((s) => s.currentGeneration);
     const getGenerationById = useGenerationStore((s) => s.getGenerationById);
 
-    const [addOpen, setAddOpen] = useState(false);
-    const [addSubmitting, setAddSubmitting] = useState(false);
-    const [editTrim, setEditTrim] = useState<Trim | null>(null);
-    const [editSubmitting, setEditSubmitting] = useState(false);
+    const [formOpen, setFormOpen] = useState(false);
+    const [formEditing, setFormEditing] = useState<Trim | null>(null);
     const [attrsTrim, setAttrsTrim] = useState<Trim | null>(null);
 
     useEffect(() => {
@@ -59,8 +55,6 @@ const TrimsLayout = () => {
             message.error('Не удалось загрузить комплектации');
         });
         return () => {
-            // Сбрасываем фильтр стора при уходе со страницы — иначе следующая
-            // страница комплектаций откроется с прошлым generationId в запросе.
             resetFilter();
         };
     }, [generationId]);
@@ -77,41 +71,19 @@ const TrimsLayout = () => {
         if (generationId) getGenerationById(generationId).catch(() => {});
     }, [generationId, getGenerationById]);
 
-    const onAddSubmit = async (values: TrimFormValues) => {
-        if (!generationId) return;
-        setAddSubmitting(true);
-        try {
-            await createTrim({
-                generationId,
-                name: values.name,
-                order: values.order,
-                isHidden: values.isHidden,
-            });
-            message.success('Комплектация создана');
-            setAddOpen(false);
-        } catch {
-            message.error('Не удалось создать комплектацию');
-        } finally {
-            setAddSubmitting(false);
-        }
+    const openCreateForm = () => {
+        setFormEditing(null);
+        setFormOpen(true);
     };
 
-    const onEditSubmit = async (values: TrimFormValues) => {
-        if (!editTrim) return;
-        setEditSubmitting(true);
-        try {
-            await updateTrimById(editTrim.id, {
-                name: values.name,
-                order: values.order,
-                isHidden: values.isHidden,
-            });
-            message.success('Комплектация обновлена');
-            setEditTrim(null);
-        } catch {
-            message.error('Не удалось обновить комплектацию');
-        } finally {
-            setEditSubmitting(false);
-        }
+    const openEditForm = (trim: Trim) => {
+        setFormEditing(trim);
+        setFormOpen(true);
+    };
+
+    const closeForm = () => {
+        setFormOpen(false);
+        setFormEditing(null);
     };
 
     const onDelete = async (record: Trim) => {
@@ -129,18 +101,6 @@ const TrimsLayout = () => {
             message.error('Не удалось загрузить комплектации');
         });
     };
-
-    const editInitialValues = useMemo<TrimFormValues | undefined>(
-        () =>
-            editTrim
-                ? {
-                      name: editTrim.name,
-                      order: editTrim.order,
-                      isHidden: editTrim.isHidden,
-                  }
-                : undefined,
-        [editTrim],
-    );
 
     const enc = encodeURIComponent;
     const breadcrumb = brandId && modelId && generationId ? (
@@ -182,7 +142,7 @@ const TrimsLayout = () => {
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={() => setAddOpen(true)}
+                        onClick={openCreateForm}
                     >
                         Добавить
                     </Button>
@@ -202,33 +162,17 @@ const TrimsLayout = () => {
                     meta={meta}
                     query={trimsObj}
                     onPageChange={onPageChange}
-                    onEdit={setEditTrim}
+                    onEdit={openEditForm}
                     onManageAttributes={setAttrsTrim}
                     onDelete={onDelete}
                 />
 
                 <TrimFormModal
-                    key="trim-add"
-                    title="Новая комплектация"
-                    open={addOpen}
-                    submitting={addSubmitting}
-                    submitText="Создать"
-                    seedKey="add"
+                    open={formOpen}
+                    editing={formEditing}
+                    generationId={generationId ?? null}
                     defaultOrder={trims.length}
-                    onCancel={() => setAddOpen(false)}
-                    onSubmit={onAddSubmit}
-                />
-
-                <TrimFormModal
-                    key={editTrim?.id ?? 'trim-edit'}
-                    title={editTrim ? `Редактирование: ${editTrim.name}` : 'Редактирование'}
-                    open={!!editTrim}
-                    submitting={editSubmitting}
-                    submitText="Сохранить"
-                    seedKey={editTrim?.id}
-                    initialValues={editInitialValues}
-                    onCancel={() => setEditTrim(null)}
-                    onSubmit={onEditSubmit}
+                    onClose={closeForm}
                 />
 
                 <EntityAttributesModal

@@ -130,7 +130,7 @@ const MainLayout = () => {
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Layout.Header className="app-header">
+            <Layout.Header className="app-header" style={{ padding:'24px 50px' }}>
                 <div className="app-header__nav">
                     <Typography.Text strong className="app-header__brand">
                         My Compare

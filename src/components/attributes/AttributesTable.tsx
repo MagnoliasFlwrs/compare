@@ -1,5 +1,5 @@
 import React from 'react';
-import { DeleteOutlined, EditOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { Button, ConfigProvider, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ruRU from 'antd/locale/ru_RU';
@@ -19,7 +19,6 @@ interface Props {
     limit: number;
     onPageChange: (page: number, limit: number) => void;
     onEdit: (record: Attribute) => void;
-    onManageOptions: (record: Attribute) => void;
     onDelete: (record: Attribute) => Promise<void>;
 }
 
@@ -31,7 +30,6 @@ const AttributesTable: React.FC<Props> = ({
     limit,
     onPageChange,
     onEdit,
-    onManageOptions,
     onDelete,
 }) => {
     const columns: ColumnsType<Attribute> = [
@@ -82,20 +80,9 @@ const AttributesTable: React.FC<Props> = ({
         {
             title: 'Действия',
             key: 'actions',
-            width: 160,
+            width: 120,
             render: (_, record) => (
                 <Space>
-                    {record.type === 'SELECT' ? (
-                        <Tooltip title="Значения">
-                            <Button
-                                type="link"
-                                aria-label="Значения"
-                                onClick={() => onManageOptions(record)}
-                            >
-                                <UnorderedListOutlined />
-                            </Button>
-                        </Tooltip>
-                    ) : null}
                     <Tooltip title="Редактировать">
                         <Button
                             type="link"

@@ -1,0 +1,25 @@
+.entity-attributes-table-wrap {
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.entity-attributes-table-wrap .ant-spin-nested-loading,
+.entity-attributes-table-wrap .ant-spin-container,
+.entity-attributes-table-wrap .ant-table,
+.entity-attributes-table-wrap .ant-table-container {
+    height: 100%;
+}
+
+.entity-attributes-table-wrap .ant-table-body {
+    min-height: var(--entity-attributes-table-scroll-y) !important;
+    max-height: var(--entity-attributes-table-scroll-y) !important;
+    overflow-y: auto !important;
+}
+
+.entity-attributes-table-wrap tr.entity-attributes-row--pending > td {
+    background: #e6f4ff !important;
+}
+
+.entity-attributes-table-wrap tr.entity-attributes-row--pending:hover > td {
+    background: #bae0ff !important;
+}

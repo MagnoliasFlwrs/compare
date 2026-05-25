@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import qs from 'qs';
 import { axiosInstanceAll, baseAuthUrl } from '../store';
+import type {
+    EntityAttributeValueListItem,
+    EntityAttributeValuesListMeta,
+} from '../types/entityAttributeValue';
+import type { EntityAttributeValuesListQuery } from '../utils/entityAttributeValuesApi';
+import {
+    defaultEntityValuesObj,
+    fetchAllEntityValues,
+    fetchEntityValuesListPage,
+} from '../utils/entityValuesStoreHelpers';
+import { sortByOrder } from '../utils/sortByOrder';
 
 export interface Trim {
     id: string;
@@ -83,6 +94,18 @@ interface TrimsState {
     setTrimValue: (payload: SetTrimValuePayload) => Promise<void>;
     updateTrimValueById: (id: string, payload: UpdateTrimValuePayload) => Promise<void>;
     deleteTrimValueById: (id: string) => Promise<void>;
+
+    /** GET /trims/value/list */
+    entityValues: EntityAttributeValueListItem[];
+    entityValuesMeta: EntityAttributeValuesListMeta | null;
+    entityValuesObj: EntityAttributeValuesListQuery;
+    entityValuesLoading: boolean;
+    getTrimValuesList: (
+        override?: Partial<Pick<EntityAttributeValuesListQuery, 'page' | 'limit' | 'trimId'>>,
+    ) => Promise<void>;
+    fetchAllTrimValues: (trimId: string) => Promise<void>;
+    filterTrimValuesByTrimId: (trimId: string) => void;
+    resetTrimValuesFilter: () => void;
 }
 
 export const useTrimsStore = create<TrimsState>((set, get) => ({
@@ -94,6 +117,11 @@ export const useTrimsStore = create<TrimsState>((set, get) => ({
     },
     currentTrim: null,
     loading: false,
+
+    entityValues: [],
+    entityValuesMeta: null,
+    entityValuesObj: defaultEntityValuesObj('trims'),
+    entityValuesLoading: false,
 
     getTrims: async (override) => {
         const trimsObj = { ...get().trimsObj, ...override };
@@ -107,7 +135,7 @@ export const useTrimsStore = create<TrimsState>((set, get) => ({
                 headers: { accept: 'application/json' },
             });
             const body = res.data as TrimsListResponse;
-            const list = Array.isArray(body?.data) ? body.data : [];
+            const list = sortByOrder(Array.isArray(body?.data) ? body.data : []);
             const meta = body?.meta ?? null;
             set({
                 trims: list,
@@ -227,4 +255,58 @@ export const useTrimsStore = create<TrimsState>((set, get) => ({
             throw new Error('Не удалось удалить значение характеристики');
         }
     },
+
+    getTrimValuesList: async (override) => {
+        const entityValuesObj = { ...get().entityValuesObj, ...override };
+        set({ entityValuesObj, entityValuesLoading: true });
+        try {
+            const { data, meta } = await fetchEntityValuesListPage('trims', entityValuesObj);
+            set({
+                entityValues: data,
+                entityValuesMeta: meta,
+                entityValuesObj: {
+                    page: meta?.page ?? entityValuesObj.page,
+                    limit: meta?.limit ?? entityValuesObj.limit,
+                    trimId: entityValuesObj.trimId,
+                },
+                entityValuesLoading: false,
+            });
+        } catch {
+            set({ entityValues: [], entityValuesMeta: null, entityValuesLoading: false });
+            throw new Error('Не удалось загрузить значения характеристик комплектации');
+        }
+    },
+
+    fetchAllTrimValues: async (trimId) => {
+        const entityValuesObj = { ...get().entityValuesObj, page: 1, limit: 100, trimId };
+        set({ entityValuesObj, entityValuesLoading: true });
+        try {
+            const list = await fetchAllEntityValues('trims', trimId);
+            set({
+                entityValues: list,
+                entityValuesMeta: null,
+                entityValuesObj,
+                entityValuesLoading: false,
+            });
+        } catch {
+            set({ entityValues: [], entityValuesMeta: null, entityValuesLoading: false });
+            throw new Error('Не удалось загрузить значения характеристик комплектации');
+        }
+    },
+
+    filterTrimValuesByTrimId: (trimId) =>
+        set((state) => ({
+            entityValuesObj: {
+                ...state.entityValuesObj,
+                page: 1,
+                trimId,
+            },
+        })),
+
+    resetTrimValuesFilter: () =>
+        set({
+            entityValuesObj: defaultEntityValuesObj('trims'),
+            entityValues: [],
+            entityValuesMeta: null,
+        }),
 }));

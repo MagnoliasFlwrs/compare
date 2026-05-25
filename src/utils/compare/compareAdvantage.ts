@@ -1,5 +1,13 @@
-/** Сравнение значений атрибутов для фильтра «оставить преимущества» в таблице. */
-import type { Attribute, AttributeOption } from '../../types/attributes';
+/**
+ * Сравнение значений атрибутов для фильтра «оставить преимущества».
+ *
+ * Типы преимущества (advantageType):
+ * - MORE_IS_BETTER — число/диапазон/boolean: больше score лучше;
+ * - LESS_IS_BETTER — меньше score лучше (разгон, расход);
+ * - ENUM_ORDER — только смысл для SELECT: score = order варианта, больший order = «последний» = лучше;
+ * - NONE — сравнение отключено.
+ */
+import type { AdvantageType, Attribute, AttributeOption } from '../../types/attributes';
 import type { EntityAttributeValue } from '../../types/entityAttributeValue';
 import { pickIdString } from '../pickIdString';
 
@@ -11,7 +19,30 @@ function optionOrder(options: AttributeOption[] | undefined, optionId: string): 
     return found != null ? found.order : null;
 }
 
-/** Числовое «качество» значения для сравнения (больше = лучше внутри шкалы). */
+/** Левое значение строго лучше правого при заданных score и типе преимущества. */
+function leftScoreBeatsRight(
+    advantageType: AdvantageType,
+    leftScore: number,
+    rightScore: number,
+): boolean {
+    switch (advantageType) {
+        case 'LESS_IS_BETTER':
+            return leftScore < rightScore;
+        case 'MORE_IS_BETTER':
+            return leftScore > rightScore;
+        case 'ENUM_ORDER':
+            // SELECT: больший order варианта = «последний» = лучше; для чисел — как MORE_IS_BETTER.
+            return leftScore > rightScore;
+        case 'NONE':
+        default:
+            return false;
+    }
+}
+
+/**
+ * Числовая шкала для сравнения.
+ * SELECT + ENUM_ORDER: order выбранного варианта (0 … n, последний = лучший).
+ */
 export function comparableScore(
     attribute: Attribute,
     value: EntityAttributeValue | undefined,
@@ -25,6 +56,14 @@ export function comparableScore(
             if (value.valueBoolean == null) return null;
             return value.valueBoolean ? 1 : 0;
         case 'SELECT': {
+            // В справочнике для SELECT — ENUM_ORDER; старые записи с MORE/LESS тоже сравниваем по order.
+            if (
+                attribute.advantageType !== 'ENUM_ORDER' &&
+                attribute.advantageType !== 'MORE_IS_BETTER' &&
+                attribute.advantageType !== 'LESS_IS_BETTER'
+            ) {
+                return null;
+            }
             const id = pickIdString(value.optionId);
             return optionOrder(attribute.options, id);
         }
@@ -57,10 +96,7 @@ export function compareValues(
     if (rightScore == null) return 'left';
     if (leftScore === rightScore) return 'equal';
 
-    const leftBetter =
-        attribute.advantageType === 'LESS_IS_BETTER'
-            ? leftScore < rightScore
-            : leftScore > rightScore;
+    const leftBetter = leftScoreBeatsRight(attribute.advantageType, leftScore, rightScore);
 
     return leftBetter ? 'left' : 'right';
 }

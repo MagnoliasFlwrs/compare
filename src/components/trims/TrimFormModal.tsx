@@ -1,68 +1,102 @@
-import React, { useEffect, useRef } from 'react';
-import { Button, Checkbox, Form, InputNumber, Input, Modal, Space } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { App, Button, Form, Input, InputNumber, Modal, Space, Switch } from 'antd';
+import type { Trim } from '../../stores/trimsStore';
+import { useTrimsStore } from '../../stores/trimsStore';
+import {
+    normalizeTrimFormValues,
+    TRIM_FORM_DEFAULTS,
+    trimToFormValues,
+    type TrimFormValues,
+} from './trimFormUtils';
 
-export type TrimFormValues = {
-    name: string;
-    order: number;
-    isHidden: boolean;
-};
+export type { TrimFormValues };
 
 interface Props {
-    title: string;
     open: boolean;
-    submitting: boolean;
-    submitText: string;
-    seedKey?: string;
+    /** При open: null — создание, объект — редактирование. */
+    editing: Trim | null;
+    generationId: string | null;
     defaultOrder?: number;
-    initialValues?: TrimFormValues;
-    onCancel: () => void;
-    onSubmit: (values: TrimFormValues) => Promise<void> | void;
+    onClose: () => void;
+    onSaved?: () => void;
 }
 
-const DEFAULT_VALUES: TrimFormValues = {
-    name: '',
-    order: 0,
-    isHidden: false,
-};
-
 const TrimFormModal: React.FC<Props> = ({
-    title,
     open,
-    submitting,
-    submitText,
-    seedKey = 'add',
+    editing,
+    generationId,
     defaultOrder = 0,
-    initialValues,
-    onCancel,
-    onSubmit,
+    onClose,
+    onSaved,
 }) => {
+    const { message } = App.useApp();
+    const createTrim = useTrimsStore((s) => s.createTrim);
+    const updateTrimById = useTrimsStore((s) => s.updateTrimById);
+
     const [form] = Form.useForm<TrimFormValues>();
-    const prevOpenRef = useRef(false);
-    const lastSeedKeyRef = useRef<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    const isEdit = editing !== null;
+
+    const title = useMemo(
+        () =>
+            isEdit
+                ? `Редактирование: ${editing.name}`
+                : 'Новая комплектация',
+        [isEdit, editing],
+    );
+
+    const submitText = isEdit ? 'Сохранить' : 'Создать';
 
     useEffect(() => {
         if (!open) {
-            prevOpenRef.current = false;
-            lastSeedKeyRef.current = null;
+            form.resetFields();
             return;
         }
-
-        const justOpened = !prevOpenRef.current;
-        const seedChanged = lastSeedKeyRef.current !== seedKey;
-        prevOpenRef.current = true;
-        lastSeedKeyRef.current = seedKey;
-
-        if (justOpened || seedChanged) {
-            form.setFieldsValue(
-                initialValues ?? { ...DEFAULT_VALUES, order: defaultOrder },
-            );
+        if (editing) {
+            form.setFieldsValue(trimToFormValues(editing));
+        } else {
+            form.setFieldsValue(TRIM_FORM_DEFAULTS(defaultOrder));
         }
-    }, [open, seedKey, defaultOrder, initialValues, form]);
+    }, [open, editing, defaultOrder, form]);
 
     const handleCancel = () => {
         form.resetFields();
-        onCancel();
+        onClose();
     };
+
+    const onCreate = async (values: TrimFormValues) => {
+        if (!generationId) return;
+        setSubmitting(true);
+        try {
+            const payload = normalizeTrimFormValues(values);
+            await createTrim({ generationId, ...payload });
+            message.success('Комплектация создана');
+            handleCancel();
+            onSaved?.();
+        } catch {
+            message.error('Не удалось создать комплектацию');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const onUpdate = async (values: TrimFormValues) => {
+        if (!editing) return;
+        setSubmitting(true);
+        try {
+            await updateTrimById(editing.id, normalizeTrimFormValues(values));
+            message.success('Комплектация обновлена');
+            handleCancel();
+            onSaved?.();
+        } catch {
+            message.error('Не удалось обновить комплектацию');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const onSubmit = isEdit ? onUpdate : onCreate;
 
     return (
         <Modal
@@ -70,20 +104,9 @@ const TrimFormModal: React.FC<Props> = ({
             open={open}
             onCancel={handleCancel}
             footer={null}
-            destroyOnClose={false}
+            destroyOnHidden
         >
-            <Form<TrimFormValues>
-                form={form}
-                layout="vertical"
-                preserve
-                onFinish={async (values) => {
-                    await onSubmit({
-                        name: values.name.trim(),
-                        order: Number(values.order ?? 0),
-                        isHidden: Boolean(values.isHidden),
-                    });
-                }}
-            >
+            <Form form={form} layout="vertical" onFinish={onSubmit}>
                 <Form.Item
                     label="Название"
                     name="name"
@@ -100,8 +123,8 @@ const TrimFormModal: React.FC<Props> = ({
                     <InputNumber min={0} style={{ width: '100%' }} />
                 </Form.Item>
 
-                <Form.Item name="isHidden" valuePropName="checked">
-                    <Checkbox>Скрыто</Checkbox>
+                <Form.Item label="Опубликована" name="isPublished" valuePropName="checked">
+                    <Switch checkedChildren="Да" unCheckedChildren="Нет" />
                 </Form.Item>
 
                 <Form.Item style={{ marginBottom: 0 }}>

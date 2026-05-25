@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, Col, Descriptions, Row, Typography } from 'antd';
 import type { Specification } from '../../stores/specificationStore';
+import { sortByOrderThenName } from '../../utils/sortByOrder';
 
 interface Props {
     specifications: Specification[];
@@ -9,7 +10,7 @@ interface Props {
 
 const SpecificationsGrid: React.FC<Props> = ({ specifications, loading }) => {
     const visible = useMemo(
-        () => specifications.filter((s) => !s.isHidden),
+        () => sortByOrderThenName(specifications.filter((s) => !s.isHidden)),
         [specifications],
     );
 

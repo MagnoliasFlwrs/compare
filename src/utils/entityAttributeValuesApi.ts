@@ -1,7 +1,15 @@
+import qs from 'qs';
 import { axiosInstanceAll, baseAuthUrl } from '../store';
 import type { AttributeCategory } from '../types/attributes';
-import type { EntityAttributeValue, EntityValueResource } from '../types/entityAttributeValue';
+import type {
+    EntityAttributeValue,
+    EntityAttributeValueListItem,
+    EntityAttributeValuesListMeta,
+    EntityAttributeValuesListResponse,
+    EntityValueResource,
+} from '../types/entityAttributeValue';
 import { fetchAllPages } from './paginatedFetch';
+import { pickIdString } from './pickIdString';
 
 export const ENTITY_VALUE_CONFIG: Record<
     EntityValueResource,
@@ -14,6 +22,10 @@ export const ENTITY_VALUE_CONFIG: Record<
 
 function valuesUrl(resource: EntityValueResource): string {
     return `${baseAuthUrl}/${resource}/value`;
+}
+
+export function entityValuesListUrl(resource: EntityValueResource): string {
+    return `${valuesUrl(resource)}/list`;
 }
 
 export type SetEntityAttributeValuePayload = {
@@ -31,22 +43,52 @@ export type UpdateEntityAttributeValuePayload = Omit<
     'attributeId'
 >;
 
-/**
- * Список значений сущности. Бэкенд может не отдавать GET — тогда [].
- * Пробуем плоский query-параметр (trimId / specificationId / powertrainId).
- */
+export type EntityAttributeValuesListQuery = {
+    limit: number;
+    page: number;
+    trimId?: string;
+    specificationId?: string;
+    powertrainId?: string;
+};
+
+/** Одна страница GET /{resource}/value/list. */
+export async function getEntityAttributeValuesListPage(
+    resource: EntityValueResource,
+    query: EntityAttributeValuesListQuery,
+): Promise<{ data: EntityAttributeValueListItem[]; meta: EntityAttributeValuesListMeta | null }> {
+    const queryString = qs.stringify(query, { arrayFormat: 'indices', skipNulls: true });
+    const res = await axiosInstanceAll.get(
+        `${entityValuesListUrl(resource)}?${queryString}`,
+        { headers: { accept: 'application/json' } },
+    );
+    const body = res.data as EntityAttributeValuesListResponse;
+    return {
+        data: Array.isArray(body?.data) ? body.data : [],
+        meta: body?.meta ?? null,
+    };
+}
+
+/** Все значения сущности (обход пагинации, лимит 100 на страницу). */
 export async function listEntityAttributeValues(
     resource: EntityValueResource,
     entityId: string,
-): Promise<EntityAttributeValue[]> {
+): Promise<EntityAttributeValueListItem[]> {
     const { entityIdKey } = ENTITY_VALUE_CONFIG[resource];
-    try {
-        return await fetchAllPages<EntityAttributeValue>(valuesUrl(resource), {
-            [entityIdKey]: entityId,
-        });
-    } catch {
-        return [];
+    return fetchAllPages<EntityAttributeValueListItem>(entityValuesListUrl(resource), {
+        [entityIdKey]: entityId,
+    });
+}
+
+/** Словарь attributeId → значение из списка API. */
+export function entityAttributeValuesToMap(
+    items: EntityAttributeValueListItem[],
+): Record<string, EntityAttributeValue> {
+    const out: Record<string, EntityAttributeValue> = {};
+    for (const item of items) {
+        const attrId = pickIdString(item.attributeId) || item.attribute?.id;
+        if (attrId) out[attrId] = item;
     }
+    return out;
 }
 
 /** POST /{resource}/value — задать значение. */

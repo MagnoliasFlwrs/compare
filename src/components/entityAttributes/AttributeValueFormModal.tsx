@@ -3,6 +3,7 @@ import { Button, Form, Input, InputNumber, Modal, Select, Space, Switch } from '
 import type { Attribute } from '../../types/attributes';
 import type { EntityAttributeValue } from '../../types/entityAttributeValue';
 import { pickIdString } from '../../utils/pickIdString';
+import { sortByOrder } from '../../utils/sortByOrder';
 
 export type AttributeValueFormValues = {
     valueText?: string;
@@ -91,7 +92,7 @@ const AttributeValueFormModal: React.FC<Props> = ({
                     >
                         <Select
                             placeholder="Выберите"
-                            options={(attribute.options ?? []).map((o) => ({
+                            options={sortByOrder(attribute.options ?? []).map((o) => ({
                                 value: o.id,
                                 label: o.value,
                             }))}

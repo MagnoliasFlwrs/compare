@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
 import { Button, ConfigProvider, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -8,6 +8,7 @@ import type {
     SpecificationsListMeta,
     SpecificationsQuery,
 } from '../../stores/specificationStore';
+import { sortByOrderThenName } from '../../utils/sortByOrder';
 
 interface Props {
     data: Specification[];
@@ -30,6 +31,8 @@ const SpecificationsTable: React.FC<Props> = ({
     onManageAttributes,
     onDelete,
 }) => {
+    const sortedData = useMemo(() => sortByOrderThenName(data), [data]);
+
     const columns: ColumnsType<Specification> = [
         {
             title: 'Название',
@@ -38,7 +41,7 @@ const SpecificationsTable: React.FC<Props> = ({
             ellipsis: true,
         },
         {
-            title: 'Габариты, мм (Д×Ш×В)',
+            title: 'Габариты, см (Д×Ш×В)',
             key: 'dimensions',
             width: 180,
             render: (_, r) => `${r.length}×${r.width}×${r.height}`,
@@ -74,11 +77,15 @@ const SpecificationsTable: React.FC<Props> = ({
             ellipsis: true,
         },
         {
-            title: 'Скрыта',
-            key: 'isHidden',
-            width: 90,
+            title: 'Опубликована',
+            key: 'isPublished',
+            width: 110,
             render: (_, record) =>
-                record.isHidden ? <Tag color="default">Да</Tag> : <Tag color="green">Нет</Tag>,
+                record.isHidden ? (
+                    <Tag color="default">Нет</Tag>
+                ) : (
+                    <Tag color="green">Да</Tag>
+                ),
         },
         {
             title: 'Действия',
@@ -128,7 +135,7 @@ const SpecificationsTable: React.FC<Props> = ({
             <Table<Specification>
                 rowKey="id"
                 columns={columns}
-                dataSource={data}
+                dataSource={sortedData}
                 loading={loading}
                 scroll={{ x: 1100 }}
                 pagination={{

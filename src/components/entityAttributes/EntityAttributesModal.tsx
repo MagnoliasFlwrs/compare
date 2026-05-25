@@ -1,36 +1,30 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { EditOutlined, PlusOutlined } from '@ant-design/icons';
-import {
-    App,
-    Button,
-    ConfigProvider,
-    Flex,
-    Modal,
-    Popconfirm,
-    Spin,
-    Table,
-    Tooltip,
-    Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { App, ConfigProvider, Flex, Modal, Spin, Typography } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
 import type { Attribute } from '../../types/attributes';
 import type { EntityAttributeValue, EntityValueResource } from '../../types/entityAttributeValue';
 import { useAttributesStore } from '../../stores/attributesStore';
 import { useAttributeOptionsStore } from '../../stores/attributeOptionsStore';
+import { usePowertrainStore } from '../../stores/powertrainStore';
+import { useSpecificationStore } from '../../stores/specificationStore';
+import { useTrimsStore } from '../../stores/trimsStore';
 import { fetchAllPages } from '../../utils/paginatedFetch';
 import { baseAuthUrl } from '../../store';
 import {
     ENTITY_VALUE_CONFIG,
     createEntityAttributeValue,
     deleteEntityAttributeValue,
+    entityAttributeValuesToMap,
+    listEntityAttributeValues,
     updateEntityAttributeValue,
 } from '../../utils/entityAttributeValuesApi';
-import { TYPE_LABELS } from '../attributes/attributeLabels';
-import { formatAttributeValueDisplay } from './formatAttributeValueDisplay';
 import AttributeValueFormModal, {
     type AttributeValueFormValues,
 } from './AttributeValueFormModal';
+import EntityAttributesTablesPanel from './EntityAttributesTablesPanel';
+import type { AssignedAttributeRow } from './entityAttributesTypes';
+import { sortByOrder } from '../../utils/sortByOrder';
+import { buildAttributeValuePayload, resolveAttribute } from './entityAttributesUtils';
 
 interface Props {
     open: boolean;
@@ -38,41 +32,6 @@ interface Props {
     entityId: string | null;
     entityLabel: string;
     onClose: () => void;
-}
-
-type Row = {
-    key: string;
-    attribute: Attribute;
-    assigned: EntityAttributeValue | undefined;
-};
-
-/** Собираем отображаемое значение из ответа POST и данных формы. */
-function mergeAssignedValue(
-    attributeId: string,
-    saved: EntityAttributeValue | null,
-    form: AttributeValueFormValues,
-    attribute: Attribute,
-): EntityAttributeValue {
-    const id = saved?.id ?? `local-${attributeId}`;
-    const base: EntityAttributeValue = {
-        id,
-        attributeId,
-        ...saved,
-    };
-    switch (attribute.type) {
-        case 'TEXT':
-            return { ...base, valueText: form.valueText?.trim() };
-        case 'NUMBER':
-            return { ...base, valueNumber: form.valueNumber };
-        case 'BOOLEAN':
-            return { ...base, valueBoolean: form.valueBoolean };
-        case 'SELECT':
-            return { ...base, optionId: form.optionId };
-        case 'RANGE':
-            return { ...base, rangeFrom: form.rangeFrom, rangeTo: form.rangeTo };
-        default:
-            return base;
-    }
 }
 
 const EntityAttributesModal: React.FC<Props> = ({
@@ -90,52 +49,133 @@ const EntityAttributesModal: React.FC<Props> = ({
 
     const [loading, setLoading] = useState(false);
     const [attributes, setAttributes] = useState<Attribute[]>([]);
-    /** Значения, заданные в этой сессии (GET списка value в API нет). */
     const [assignedByAttributeId, setAssignedByAttributeId] = useState<
         Record<string, EntityAttributeValue>
     >({});
+    const [pendingAttributeIds, setPendingAttributeIds] = useState<string[]>([]);
+    const [selectedAvailableIds, setSelectedAvailableIds] = useState<string[]>([]);
+    const [searchName, setSearchName] = useState('');
+
     const [formAttribute, setFormAttribute] = useState<Attribute | null>(null);
     const [formExisting, setFormExisting] = useState<EntityAttributeValue | null>(null);
     const [formSubmitting, setFormSubmitting] = useState(false);
 
-    const loadAttributes = useCallback(async () => {
+    const reloadAssignedValues = useCallback(async () => {
+        if (!entityId) return;
+        const values = await listEntityAttributeValues(resource, entityId);
+        setAssignedByAttributeId(entityAttributeValuesToMap(values));
+    }, [entityId, resource]);
+
+    const syncParentEntityValuesList = useCallback(async () => {
+        if (!entityId) return;
+        if (resource === 'trims') {
+            const { entityValuesObj, getTrimValuesList } = useTrimsStore.getState();
+            if (entityValuesObj.trimId === entityId) {
+                await getTrimValuesList();
+            }
+            return;
+        }
+        if (resource === 'specifications') {
+            const { entityValuesObj, getSpecificationValuesList } =
+                useSpecificationStore.getState();
+            if (entityValuesObj.specificationId === entityId) {
+                await getSpecificationValuesList();
+            }
+            return;
+        }
+        const { entityValuesObj, getPowertrainValuesList } = usePowertrainStore.getState();
+        if (entityValuesObj.powertrainId === entityId) {
+            await getPowertrainValuesList();
+        }
+    }, [entityId, resource]);
+
+    const refreshLists = useCallback(async () => {
+        try {
+            await reloadAssignedValues();
+            await syncParentEntityValuesList();
+        } catch {
+            message.error('Не удалось обновить списки');
+        }
+    }, [reloadAssignedValues, syncParentEntityValuesList, message]);
+
+    const loadData = useCallback(async () => {
         if (!entityId) return;
         setLoading(true);
         try {
-            const attrs = await fetchAllPages<Attribute>(`${baseAuthUrl}/attributes`, {
-                category,
-            });
+            const [attrs, values] = await Promise.all([
+                fetchAllPages<Attribute>(`${baseAuthUrl}/attributes`, { category }),
+                listEntityAttributeValues(resource, entityId),
+            ]);
             setAttributes(attrs);
+            setAssignedByAttributeId(entityAttributeValuesToMap(values));
         } catch {
-            message.error('Не удалось загрузить характеристики');
+            message.error('Не удалось загрузить данные');
             setAttributes([]);
+            setAssignedByAttributeId({});
         } finally {
             setLoading(false);
         }
-    }, [entityId, category, message]);
+    }, [entityId, category, resource, message]);
 
     useEffect(() => {
         if (!open || !entityId) {
             setAttributes([]);
             setAssignedByAttributeId({});
+            setPendingAttributeIds([]);
+            setSelectedAvailableIds([]);
+            setSearchName('');
             setFormAttribute(null);
             setFormExisting(null);
             return;
         }
-        loadAttributes();
-    }, [open, entityId, loadAttributes]);
+        loadData();
+    }, [open, entityId, loadData]);
 
-    const rows: Row[] = useMemo(
-        () =>
-            [...attributes]
-                .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
-                .map((attribute) => ({
-                    key: attribute.id,
-                    attribute,
-                    assigned: assignedByAttributeId[attribute.id],
-                })),
-        [attributes, assignedByAttributeId],
+    const assignedIdSet = useMemo(
+        () => new Set(Object.keys(assignedByAttributeId)),
+        [assignedByAttributeId],
     );
+
+    const assignedTableData: AssignedAttributeRow[] = useMemo(() => {
+        const pending: AssignedAttributeRow[] = [];
+        for (const id of pendingAttributeIds) {
+            if (assignedIdSet.has(id)) continue;
+            const attribute = attributes.find((a) => a.id === id);
+            if (attribute) pending.push({ key: `pending-${id}`, kind: 'pending', attribute });
+        }
+
+        const assigned = Object.entries(assignedByAttributeId)
+            .map(([attributeId, value]) => {
+                const attribute = resolveAttribute(attributeId, value, attributes);
+                if (!attribute) return null;
+                return {
+                    key: attributeId,
+                    kind: 'assigned' as const,
+                    attribute,
+                    value,
+                };
+            })
+            .filter((r): r is Extract<AssignedAttributeRow, { kind: 'assigned' }> => r != null)
+            .sort((a, b) => a.attribute.name.localeCompare(b.attribute.name, 'ru'));
+
+        return [...pending, ...assigned];
+    }, [pendingAttributeIds, assignedIdSet, attributes, assignedByAttributeId]);
+
+    const moveToPending = (ids: string[]) => {
+        if (ids.length === 0) return;
+        setPendingAttributeIds((prev) => {
+            const next = [...prev];
+            for (const id of ids) {
+                if (!next.includes(id)) next.unshift(id);
+            }
+            return next;
+        });
+    };
+
+    const handleAddSelected = () => {
+        moveToPending(selectedAvailableIds);
+        setSelectedAvailableIds([]);
+    };
 
     const openForm = async (attribute: Attribute, existing: EntityAttributeValue | null) => {
         let attr = attribute;
@@ -145,7 +185,7 @@ const EntityAttributesModal: React.FC<Props> = ({
             } catch {
                 try {
                     const opts = await getOptionsForAttribute(attribute.id);
-                    attr = { ...attribute, options: opts };
+                    attr = { ...attribute, options: sortByOrder(opts) };
                 } catch {
                     message.error('Не удалось загрузить варианты значений');
                     return;
@@ -156,71 +196,29 @@ const EntityAttributesModal: React.FC<Props> = ({
         setFormExisting(existing);
     };
 
-    const buildPayload = (attr: Attribute, form: AttributeValueFormValues) => {
-        const base = { attributeId: attr.id };
-        switch (attr.type) {
-            case 'TEXT':
-                return { ...base, valueText: form.valueText?.trim() };
-            case 'NUMBER':
-                return { ...base, valueNumber: form.valueNumber };
-            case 'BOOLEAN':
-                return { ...base, valueBoolean: form.valueBoolean };
-            case 'SELECT':
-                return { ...base, optionId: form.optionId };
-            case 'RANGE':
-                return {
-                    ...base,
-                    rangeFrom: form.rangeFrom,
-                    rangeTo: form.rangeTo,
-                };
-            default:
-                return base;
-        }
-    };
-
     const onSaveValue = async (formValues: AttributeValueFormValues) => {
         if (!entityId || !formAttribute) return;
         setFormSubmitting(true);
         try {
             if (formExisting?.id && !formExisting.id.startsWith('local-')) {
-                const payload = buildPayload(formAttribute, formValues);
+                const payload = buildAttributeValuePayload(formAttribute, formValues);
                 const { attributeId: _omit, ...updateBody } = payload;
-                const updated = await updateEntityAttributeValue(
-                    resource,
-                    formExisting.id,
-                    updateBody,
-                );
-                const merged = mergeAssignedValue(
-                    formAttribute.id,
-                    updated ?? formExisting,
-                    formValues,
-                    formAttribute,
-                );
-                setAssignedByAttributeId((prev) => ({
-                    ...prev,
-                    [formAttribute.id]: merged,
-                }));
+                await updateEntityAttributeValue(resource, formExisting.id, updateBody);
                 message.success('Значение обновлено');
             } else {
-                const saved = await createEntityAttributeValue(
+                await createEntityAttributeValue(
                     resource,
                     entityId,
-                    buildPayload(formAttribute, formValues),
+                    buildAttributeValuePayload(formAttribute, formValues),
                 );
-                const merged = mergeAssignedValue(
-                    formAttribute.id,
-                    saved,
-                    formValues,
-                    formAttribute,
+                setPendingAttributeIds((prev) =>
+                    prev.filter((id) => id !== formAttribute.id),
                 );
-                setAssignedByAttributeId((prev) => ({
-                    ...prev,
-                    [formAttribute.id]: merged,
-                }));
                 message.success('Значение задано');
             }
             setFormAttribute(null);
             setFormExisting(null);
+            await refreshLists();
         } catch {
             message.error(
                 formExisting ? 'Не удалось обновить значение' : 'Не удалось задать значение',
@@ -230,7 +228,7 @@ const EntityAttributesModal: React.FC<Props> = ({
         }
     };
 
-    const onDeleteValue = async (attributeId: string, value: EntityAttributeValue) => {
+    const onDeleteValue = async (_attributeId: string, value: EntityAttributeValue) => {
         if (!value.id.startsWith('local-')) {
             try {
                 await deleteEntityAttributeValue(resource, value.id);
@@ -239,72 +237,13 @@ const EntityAttributesModal: React.FC<Props> = ({
                 return;
             }
         }
-        setAssignedByAttributeId((prev) => {
-            const next = { ...prev };
-            delete next[attributeId];
-            return next;
-        });
-        message.success('Значение удалено');
+        try {
+            await refreshLists();
+            message.success('Значение удалено');
+        } catch {
+            message.error('Не удалось обновить списки');
+        }
     };
-
-    const columns: ColumnsType<Row> = [
-        {
-            title: 'Характеристика',
-            key: 'name',
-            ellipsis: true,
-            render: (_, r) => r.attribute.name,
-        },
-        {
-            title: 'Тип',
-            key: 'type',
-            width: 150,
-            render: (_, r) => TYPE_LABELS[r.attribute.type] ?? r.attribute.type,
-        },
-        {
-            title: 'Значение',
-            key: 'value',
-            ellipsis: true,
-            render: (_, r) => formatAttributeValueDisplay(r.attribute, r.assigned),
-        },
-        {
-            title: 'Действия',
-            key: 'actions',
-            width: 120,
-            render: (_, r) =>
-                r.assigned ? (
-                    <Flex gap={4}>
-                        <Tooltip title="Изменить">
-                            <Button
-                                type="link"
-                                size="small"
-                                icon={<EditOutlined />}
-                                onClick={() => openForm(r.attribute, r.assigned!)}
-                            />
-                        </Tooltip>
-                        <Popconfirm
-                            title="Удалить значение?"
-                            okText="Удалить"
-                            cancelText="Отмена"
-                            okButtonProps={{ danger: true }}
-                            onConfirm={() => onDeleteValue(r.attribute.id, r.assigned!)}
-                        >
-                            <Button type="link" size="small" danger>
-                                Удал.
-                            </Button>
-                        </Popconfirm>
-                    </Flex>
-                ) : (
-                    <Button
-                        type="link"
-                        size="small"
-                        icon={<PlusOutlined />}
-                        onClick={() => openForm(r.attribute, null)}
-                    >
-                        Задать
-                    </Button>
-                ),
-        },
-    ];
 
     return (
         <>
@@ -313,7 +252,7 @@ const EntityAttributesModal: React.FC<Props> = ({
                 open={open && Boolean(entityId)}
                 onCancel={onClose}
                 footer={null}
-                width="min(96vw, 900px)"
+                width="min(96vw, 1280px)"
                 destroyOnClose
             >
                 {loading ? (
@@ -327,15 +266,23 @@ const EntityAttributesModal: React.FC<Props> = ({
                     </Typography.Text>
                 ) : (
                     <ConfigProvider locale={ruRU}>
-                            <Table<Row>
-                                rowKey="key"
-                                columns={columns}
-                                dataSource={rows}
-                                pagination={false}
-                                size="small"
-                                scroll={{ y: 400 }}
-                            />
-                        </ConfigProvider>
+                        <EntityAttributesTablesPanel
+                            attributes={attributes}
+                            assignedByAttributeId={assignedByAttributeId}
+                            assignedTableData={assignedTableData}
+                            pendingAttributeIds={pendingAttributeIds}
+                            selectedAvailableIds={selectedAvailableIds}
+                            searchName={searchName}
+                            onSearchNameChange={setSearchName}
+                            onSelectedAvailableChange={setSelectedAvailableIds}
+                            onAddSelected={handleAddSelected}
+                            onSetValue={(attr, existing) => openForm(attr, existing)}
+                            onRemovePending={(id) =>
+                                setPendingAttributeIds((prev) => prev.filter((x) => x !== id))
+                            }
+                            onDeleteValue={onDeleteValue}
+                        />
+                    </ConfigProvider>
                 )}
             </Modal>
 

@@ -7,6 +7,7 @@ import type {
     CreateAttributeOptionPayload,
     UpdateAttributeOptionPayload,
 } from '../types/attributes';
+import { sortByOrder } from '../utils/sortByOrder';
 
 interface AttributeOptionsListResponse {
     data?: AttributeOption[];
@@ -56,7 +57,7 @@ export const useAttributeOptionsStore = create<AttributeOptionsState>((set) => (
                 { headers: { accept: 'application/json' } },
             );
             const body = res.data as AttributeOptionsListResponse;
-            const list = Array.isArray(body?.data) ? body.data : [];
+            const list = sortByOrder(Array.isArray(body?.data) ? body.data : []);
             set({ options: list, meta: body?.meta ?? null, loading: false });
             return list;
         } catch {

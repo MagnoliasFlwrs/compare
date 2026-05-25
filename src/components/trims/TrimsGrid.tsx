@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, Col, Row, Typography } from 'antd';
 import type { Trim } from '../../stores/trimsStore';
+import { sortByOrder } from '../../utils/sortByOrder';
 
 interface Props {
     trims: Trim[];
@@ -9,10 +10,7 @@ interface Props {
 
 const TrimsGrid: React.FC<Props> = ({ trims, loading }) => {
     const visibleTrims = useMemo(
-        () =>
-            [...trims]
-                .filter((t) => !t.isHidden)
-                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+        () => sortByOrder(trims.filter((t) => !t.isHidden)),
         [trims],
     );
 

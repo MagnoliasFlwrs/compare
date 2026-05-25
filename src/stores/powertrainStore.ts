@@ -1,7 +1,18 @@
 import { create } from 'zustand';
 import qs from 'qs';
 import { axiosInstanceAll, baseAuthUrl } from '../store';
+import type {
+    EntityAttributeValueListItem,
+    EntityAttributeValuesListMeta,
+} from '../types/entityAttributeValue';
+import type { EntityAttributeValuesListQuery } from '../utils/entityAttributeValuesApi';
+import {
+    defaultEntityValuesObj,
+    fetchAllEntityValues,
+    fetchEntityValuesListPage,
+} from '../utils/entityValuesStoreHelpers';
 import { fetchAllPages } from '../utils/paginatedFetch';
+import { sortByOrder } from '../utils/sortByOrder';
 
 export interface Powertrain {
     id: string;
@@ -152,6 +163,20 @@ interface PowertrainState {
         payload: UpdatePowertrainValuePayload,
     ) => Promise<void>;
     deletePowertrainValueById: (id: string) => Promise<void>;
+
+    /** GET /powertrains/value/list */
+    entityValues: EntityAttributeValueListItem[];
+    entityValuesMeta: EntityAttributeValuesListMeta | null;
+    entityValuesObj: EntityAttributeValuesListQuery;
+    entityValuesLoading: boolean;
+    getPowertrainValuesList: (
+        override?: Partial<
+            Pick<EntityAttributeValuesListQuery, 'page' | 'limit' | 'powertrainId'>
+        >,
+    ) => Promise<void>;
+    fetchAllPowertrainValues: (powertrainId: string) => Promise<void>;
+    filterPowertrainValuesById: (powertrainId: string) => void;
+    resetPowertrainValuesFilter: () => void;
 }
 
 export const usePowertrainStore = create<PowertrainState>((set, get) => ({
@@ -163,6 +188,11 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
     },
     currentPowertrain: null,
     loading: false,
+
+    entityValues: [],
+    entityValuesMeta: null,
+    entityValuesObj: defaultEntityValuesObj('powertrains'),
+    entityValuesLoading: false,
 
     getPowertrains: async (override) => {
         const powertrainsObj = { ...get().powertrainsObj, ...override };
@@ -177,7 +207,7 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
                 { headers: { accept: 'application/json' } },
             );
             const body = res.data as PowertrainsListResponse;
-            const list = Array.isArray(body?.data) ? body.data : [];
+            const list = sortByOrder(Array.isArray(body?.data) ? body.data : []);
             const meta = body?.meta ?? null;
             set({
                 powertrains: list,
@@ -208,7 +238,7 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
                 generationId,
             });
             set({
-                powertrains: list,
+                powertrains: sortByOrder(list),
                 meta: null,
                 powertrainsObj,
                 loading: false,
@@ -332,4 +362,66 @@ export const usePowertrainStore = create<PowertrainState>((set, get) => ({
             throw new Error('Не удалось удалить значение характеристики');
         }
     },
+
+    getPowertrainValuesList: async (override) => {
+        const entityValuesObj = { ...get().entityValuesObj, ...override };
+        set({ entityValuesObj, entityValuesLoading: true });
+        try {
+            const { data, meta } = await fetchEntityValuesListPage(
+                'powertrains',
+                entityValuesObj,
+            );
+            set({
+                entityValues: data,
+                entityValuesMeta: meta,
+                entityValuesObj: {
+                    page: meta?.page ?? entityValuesObj.page,
+                    limit: meta?.limit ?? entityValuesObj.limit,
+                    powertrainId: entityValuesObj.powertrainId,
+                },
+                entityValuesLoading: false,
+            });
+        } catch {
+            set({ entityValues: [], entityValuesMeta: null, entityValuesLoading: false });
+            throw new Error('Не удалось загрузить значения характеристик агрегата');
+        }
+    },
+
+    fetchAllPowertrainValues: async (powertrainId) => {
+        const entityValuesObj = {
+            ...get().entityValuesObj,
+            page: 1,
+            limit: 100,
+            powertrainId,
+        };
+        set({ entityValuesObj, entityValuesLoading: true });
+        try {
+            const list = await fetchAllEntityValues('powertrains', powertrainId);
+            set({
+                entityValues: list,
+                entityValuesMeta: null,
+                entityValuesObj,
+                entityValuesLoading: false,
+            });
+        } catch {
+            set({ entityValues: [], entityValuesMeta: null, entityValuesLoading: false });
+            throw new Error('Не удалось загрузить значения характеристик агрегата');
+        }
+    },
+
+    filterPowertrainValuesById: (powertrainId) =>
+        set((state) => ({
+            entityValuesObj: {
+                ...state.entityValuesObj,
+                page: 1,
+                powertrainId,
+            },
+        })),
+
+    resetPowertrainValuesFilter: () =>
+        set({
+            entityValuesObj: defaultEntityValuesObj('powertrains'),
+            entityValues: [],
+            entityValuesMeta: null,
+        }),
 }));

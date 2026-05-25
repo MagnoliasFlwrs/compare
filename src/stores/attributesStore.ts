@@ -8,6 +8,7 @@ import type {
     CreateAttributePayload,
     UpdateAttributePayload,
 } from '../types/attributes';
+import { sortByOrder } from '../utils/sortByOrder';
 
 interface AttributesListResponse {
     data?: Attribute[];
@@ -123,7 +124,10 @@ export const useAttributesStore = create<AttributesState>((set, get) => ({
                 `${baseAuthUrl}/attributes/${encodeURIComponent(id)}`,
                 { headers: { accept: 'application/json' } },
             );
-            const currentAttribute = res.data as Attribute;
+            const raw = res.data as Attribute;
+            const currentAttribute = raw.options?.length
+                ? { ...raw, options: sortByOrder(raw.options) }
+                : raw;
             set({ loading: false, currentAttribute });
             return currentAttribute;
         } catch {

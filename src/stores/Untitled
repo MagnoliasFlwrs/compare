@@ -1,7 +1,0 @@
-curl -X 'POST' \
-  'https://compare.aps.by/api/v1/body-types' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "name": "string"
-}'

@@ -1,13 +1,25 @@
 import { create } from 'zustand';
 import qs from 'qs';
 import { axiosInstanceAll, baseAuthUrl } from '../store';
+import type {
+    EntityAttributeValueListItem,
+    EntityAttributeValuesListMeta,
+} from '../types/entityAttributeValue';
+import type { EntityAttributeValuesListQuery } from '../utils/entityAttributeValuesApi';
+import {
+    defaultEntityValuesObj,
+    fetchAllEntityValues,
+    fetchEntityValuesListPage,
+} from '../utils/entityValuesStoreHelpers';
 import { fetchAllPages } from '../utils/paginatedFetch';
+import { sortByOrderThenName } from '../utils/sortByOrder';
 
 export interface Specification {
     id: string;
     isHidden: boolean;
     generationId: string;
     name: string;
+    order?: number;
     length: number;
     width: number;
     height: number;
@@ -129,6 +141,20 @@ interface SpecificationState {
         payload: UpdateSpecificationValuePayload,
     ) => Promise<void>;
     deleteSpecificationValueById: (id: string) => Promise<void>;
+
+    /** GET /specifications/value/list */
+    entityValues: EntityAttributeValueListItem[];
+    entityValuesMeta: EntityAttributeValuesListMeta | null;
+    entityValuesObj: EntityAttributeValuesListQuery;
+    entityValuesLoading: boolean;
+    getSpecificationValuesList: (
+        override?: Partial<
+            Pick<EntityAttributeValuesListQuery, 'page' | 'limit' | 'specificationId'>
+        >,
+    ) => Promise<void>;
+    fetchAllSpecificationValues: (specificationId: string) => Promise<void>;
+    filterSpecificationValuesById: (specificationId: string) => void;
+    resetSpecificationValuesFilter: () => void;
 }
 
 export const useSpecificationStore = create<SpecificationState>((set, get) => ({
@@ -140,6 +166,11 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
     },
     currentSpecification: null,
     loading: false,
+
+    entityValues: [],
+    entityValuesMeta: null,
+    entityValuesObj: defaultEntityValuesObj('specifications'),
+    entityValuesLoading: false,
 
     getSpecifications: async (override) => {
         const specificationsObj = { ...get().specificationsObj, ...override };
@@ -154,7 +185,9 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
                 { headers: { accept: 'application/json' } },
             );
             const body = res.data as SpecificationsListResponse;
-            const list = Array.isArray(body?.data) ? body.data : [];
+            const list = sortByOrderThenName(
+                Array.isArray(body?.data) ? body.data : [],
+            );
             const meta = body?.meta ?? null;
             set({
                 specifications: list,
@@ -187,7 +220,7 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
                 generationId,
             });
             set({
-                specifications: list,
+                specifications: sortByOrderThenName(list),
                 meta: null,
                 specificationsObj,
                 loading: false,
@@ -307,4 +340,66 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
             throw new Error('Не удалось удалить значение характеристики');
         }
     },
+
+    getSpecificationValuesList: async (override) => {
+        const entityValuesObj = { ...get().entityValuesObj, ...override };
+        set({ entityValuesObj, entityValuesLoading: true });
+        try {
+            const { data, meta } = await fetchEntityValuesListPage(
+                'specifications',
+                entityValuesObj,
+            );
+            set({
+                entityValues: data,
+                entityValuesMeta: meta,
+                entityValuesObj: {
+                    page: meta?.page ?? entityValuesObj.page,
+                    limit: meta?.limit ?? entityValuesObj.limit,
+                    specificationId: entityValuesObj.specificationId,
+                },
+                entityValuesLoading: false,
+            });
+        } catch {
+            set({ entityValues: [], entityValuesMeta: null, entityValuesLoading: false });
+            throw new Error('Не удалось загрузить значения характеристик базы');
+        }
+    },
+
+    fetchAllSpecificationValues: async (specificationId) => {
+        const entityValuesObj = {
+            ...get().entityValuesObj,
+            page: 1,
+            limit: 100,
+            specificationId,
+        };
+        set({ entityValuesObj, entityValuesLoading: true });
+        try {
+            const list = await fetchAllEntityValues('specifications', specificationId);
+            set({
+                entityValues: list,
+                entityValuesMeta: null,
+                entityValuesObj,
+                entityValuesLoading: false,
+            });
+        } catch {
+            set({ entityValues: [], entityValuesMeta: null, entityValuesLoading: false });
+            throw new Error('Не удалось загрузить значения характеристик базы');
+        }
+    },
+
+    filterSpecificationValuesById: (specificationId) =>
+        set((state) => ({
+            entityValuesObj: {
+                ...state.entityValuesObj,
+                page: 1,
+                specificationId,
+            },
+        })),
+
+    resetSpecificationValuesFilter: () =>
+        set({
+            entityValuesObj: defaultEntityValuesObj('specifications'),
+            entityValues: [],
+            entityValuesMeta: null,
+        }),
 }));
