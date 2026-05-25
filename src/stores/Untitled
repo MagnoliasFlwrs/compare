@@ -1,5 +1,5 @@
 curl -X 'POST' \
-  'http://46.16.35.169/api/v1/body-types' \
+  'https://compare.aps.by/api/v1/body-types' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
