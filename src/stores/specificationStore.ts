@@ -57,6 +57,25 @@ export interface SpecificationsQuery {
     generationId?: string;
     bodyTypeId?: string;
     brandId?: string;
+    /**
+     * Расширенные фильтры для группового сравнения.
+     * Бэкенд поддерживает массивы (см. Swagger): brandIds, modelIds и т.д.
+     */
+    brandIds?: string[];
+    modelIds?: string[];
+    bodyTypeIds?: string[];
+    lengthMin?: number;
+    lengthMax?: number;
+    wheelbaseMin?: number;
+    wheelbaseMax?: number;
+    heightMin?: number;
+    heightMax?: number;
+    widthMin?: number;
+    widthMax?: number;
+    trunkStandardVolumeMin?: number;
+    trunkStandardVolumeMax?: number;
+    trunkMaximumVolumeMin?: number;
+    trunkMaximumVolumeMax?: number;
 }
 
 export interface CreateSpecificationPayload {
@@ -122,9 +141,7 @@ interface SpecificationState {
     loading: boolean;
 
     getSpecifications: (
-        override?: Partial<
-            Pick<SpecificationsQuery, 'page' | 'limit' | 'generationId' | 'bodyTypeId' | 'brandId'>
-        >,
+        override?: Partial<SpecificationsQuery>,
     ) => Promise<void>;
     /** Все характеристики поколения (обходит лимит 100 на страницу). */
     fetchAllForGeneration: (generationId: string) => Promise<void>;
@@ -176,7 +193,8 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
         const specificationsObj = { ...get().specificationsObj, ...override };
         set({ specificationsObj, loading: true });
         const queryString = qs.stringify(specificationsObj, {
-            arrayFormat: 'indices',
+            // API ожидает массивы как repeated params: brandIds=a&brandIds=b (без [0])
+            arrayFormat: 'repeat',
             skipNulls: true,
         });
         try {
@@ -198,6 +216,21 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
                     generationId: specificationsObj.generationId,
                     bodyTypeId: specificationsObj.bodyTypeId,
                     brandId: specificationsObj.brandId,
+                    brandIds: specificationsObj.brandIds,
+                    modelIds: specificationsObj.modelIds,
+                    bodyTypeIds: specificationsObj.bodyTypeIds,
+                    lengthMin: specificationsObj.lengthMin,
+                    lengthMax: specificationsObj.lengthMax,
+                    wheelbaseMin: specificationsObj.wheelbaseMin,
+                    wheelbaseMax: specificationsObj.wheelbaseMax,
+                    heightMin: specificationsObj.heightMin,
+                    heightMax: specificationsObj.heightMax,
+                    widthMin: specificationsObj.widthMin,
+                    widthMax: specificationsObj.widthMax,
+                    trunkStandardVolumeMin: specificationsObj.trunkStandardVolumeMin,
+                    trunkStandardVolumeMax: specificationsObj.trunkStandardVolumeMax,
+                    trunkMaximumVolumeMin: specificationsObj.trunkMaximumVolumeMin,
+                    trunkMaximumVolumeMax: specificationsObj.trunkMaximumVolumeMax,
                 },
                 loading: false,
             });

@@ -138,7 +138,12 @@ const MainLayout = () => {
                     {showUsersAdmin ? (
                         <Link to="/manage-users">Пользователи</Link>
                     ) : null}
-                    {!isAdmin ? <Link to="/compare">Сравнение</Link> : null}
+                    {!isAdmin ? (
+                        <>
+                            <Link to="/compare">Сравнение</Link>
+                            <Link to="/compare/group">Групповое сравнение</Link>
+                        </>
+                    ) : null}
                     <Link to="/news">Новости</Link>
                     <Link to="/brands">Бренды</Link>
                     {isAdmin ? (

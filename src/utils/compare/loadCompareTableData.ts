@@ -38,7 +38,7 @@ export type CompareTableSide = {
 export { formatPowertrainLabel };
 
 /** Поколения для загрузки: одно из выбора или все модели, если поколение не указано. */
-async function resolveGenerationIds(selection: CompareSideSelection): Promise<string[]> {
+export async function resolveGenerationIds(selection: CompareSideSelection): Promise<string[]> {
     if (selection.generationId) {
         return [selection.generationId];
     }

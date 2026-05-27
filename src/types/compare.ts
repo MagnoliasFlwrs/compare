@@ -48,6 +48,14 @@ export type CompareBlockUiState = {
     selectedSpecificationId?: string;
 };
 
+/** Минимум и максимум автомобилей на экране группового сравнения. */
+export const GROUP_COMPARE_MIN = 2;
+export const GROUP_COMPARE_MAX = 5;
+
+export type GroupCompareNavigateState = {
+    items: CompareSideSelection[];
+};
+
 export function draftToSelection(side: CompareSideDraft): CompareSideSelection {
     return {
         brandId: side.brandId!,

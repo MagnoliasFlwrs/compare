@@ -26,6 +26,7 @@ import ManageTransmissionTypesLayout from "./routes/ManageTransmissionTypesLayou
 import ManageAttributesLayout from "./routes/ManageAttributesLayout";
 import CompareSelectLayout from "./routes/CompareSelectLayout";
 import CompareResultLayout from "./routes/CompareResultLayout";
+import GroupCompareLayout from "./routes/GroupCompareLayout";
 
 function isAdminUser(user: unknown): boolean {
     if (!user || typeof user !== 'object') return false;
@@ -54,6 +55,11 @@ const AppRoutes = () => {
                       element: <CompareResultLayout />,
                       errorElement: <ErrorPage />,
                   },
+                  {
+                      path: 'compare/group',
+                      element: <GroupCompareLayout />,
+                      errorElement: <ErrorPage />,
+                  },
               ]
             : [
                   {
@@ -62,6 +68,10 @@ const AppRoutes = () => {
                   },
                   {
                       path: 'compare/result',
+                      element: <Navigate to="/brands" replace />,
+                  },
+                  {
+                      path: 'compare/group',
                       element: <Navigate to="/brands" replace />,
                   },
               ]),
