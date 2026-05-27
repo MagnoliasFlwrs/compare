@@ -65,7 +65,7 @@ const GroupCompareLayout = () => {
                 title: 'Ширина',
                 dataIndex: 'width',
                 key: 'width',
-                width: 110,
+                width: 120,
                 sorter: (a, b) => (a.width ?? 0) - (b.width ?? 0),
             },
             {
