@@ -33,8 +33,31 @@ export interface Specification {
      * не сужаем тип, чтобы не падать на сыром ответе бэка.
      */
     countryId: unknown;
+    country?: { id: string; name: string } | null;
     bodyTypeId: unknown;
+    bodyType?: { id: string; name: string } | null;
     warranty: string;
+    generation?: {
+        id: string;
+        modelId: string;
+        number: number;
+        restyling: string;
+        yearFrom: number;
+        yearTo: number | null;
+        model?: {
+            id: string;
+            brandId: string;
+            name: string;
+            isHidden: boolean;
+            brand?: {
+                id: string;
+                name: string;
+                isHidden: boolean;
+                logoId: string | null;
+                logoUrl: string | null;
+            } | null;
+        } | null;
+    } | null;
 }
 
 export interface SpecificationsListMeta {
@@ -193,7 +216,7 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
         const specificationsObj = { ...get().specificationsObj, ...override };
         set({ specificationsObj, loading: true });
         const queryString = qs.stringify(specificationsObj, {
-            // API ожидает массивы как repeated params: brandIds=a&brandIds=b (без [0])
+            // Repeat params: brandIds=a&brandIds=b (без индексов и без [])
             arrayFormat: 'repeat',
             skipNulls: true,
         });
@@ -202,11 +225,15 @@ export const useSpecificationStore = create<SpecificationState>((set, get) => ({
                 `${baseAuthUrl}/specifications?${queryString}`,
                 { headers: { accept: 'application/json' } },
             );
-            const body = res.data as SpecificationsListResponse;
-            const list = sortByOrderThenName(
-                Array.isArray(body?.data) ? body.data : [],
-            );
-            const meta = body?.meta ?? null;
+            const data = res.data as unknown;
+            const body = data as SpecificationsListResponse;
+            const listRaw = Array.isArray(data)
+                ? (data as Specification[])
+                : Array.isArray(body?.data)
+                  ? body.data
+                  : [];
+            const list = sortByOrderThenName(listRaw);
+            const meta = Array.isArray(data) ? null : body?.meta ?? null;
             set({
                 specifications: list,
                 meta,

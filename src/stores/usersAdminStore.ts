@@ -6,13 +6,33 @@ const usersListPath = '/users';
 export interface UsersAdminRow {
     id: string;
     username: string;
+    brands?: Array<{ brandId: string; userId: string }>;
+}
+
+function isBrandLink(x: unknown): x is { brandId: string; userId: string } {
+    if (!x || typeof x !== 'object') return false;
+    const obj = x as Record<string, unknown>;
+    return typeof obj.brandId === 'string' && typeof obj.userId === 'string';
 }
 
 function normalizeUserRow(raw: Record<string, unknown>): UsersAdminRow | null {
     const id = raw.id ?? raw.userId;
     const username = raw.username;
     if (id == null || username == null) return null;
-    return { id: String(id), username: String(username) };
+    const brandsRaw = raw.brands;
+    const brands = Array.isArray(brandsRaw)
+        ? brandsRaw
+              .map((b) => {
+                  if (!b || typeof b !== 'object') return null;
+                  const obj = b as Record<string, unknown>;
+                  const brandId = obj.brandId;
+                  const userId = obj.userId;
+                  if (brandId == null || userId == null) return null;
+                  return { brandId: String(brandId), userId: String(userId) };
+              })
+              .filter(isBrandLink)
+        : undefined;
+    return { id: String(id), username: String(username), brands };
 }
 
 function parseListResponse(data: unknown): { items: UsersAdminRow[]; total: number } {

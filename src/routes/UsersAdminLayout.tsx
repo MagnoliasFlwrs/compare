@@ -47,6 +47,11 @@ const UsersAdminLayout = () => {
     const [brandsSubmitting, setBrandsSubmitting] = useState(false);
     const [brandsForm] = Form.useForm<{ brandIds: string[] }>();
 
+    const fixedBrandIds = useMemo(() => {
+        const list = brandsUser?.brands ?? [];
+        return Array.from(new Set(list.map((b) => b.brandId))).filter(Boolean);
+    }, [brandsUser]);
+
     useEffect(() => {
         void fetchUsers().catch(() => {
             message.error('Не удалось загрузить пользователей');
@@ -55,6 +60,11 @@ const UsersAdminLayout = () => {
             message.error('Не удалось загрузить бренды');
         });
     }, []);
+
+    useEffect(() => {
+        if (!brandsUser) return;
+        brandsForm.setFieldsValue({ brandIds: fixedBrandIds });
+    }, [brandsUser, fixedBrandIds, brandsForm]);
 
     const brandOptions = useMemo(
         () =>
@@ -202,6 +212,14 @@ const UsersAdminLayout = () => {
                             options={brandOptions}
                             loading={brandsLoading}
                             style={{ width: '100%' }}
+                            onChange={(next) => {
+                                // Уже заданные бренды нельзя убрать: только добавляем новые.
+                                const chosen = (next ?? []).map(String);
+                                const merged = Array.from(
+                                    new Set([...fixedBrandIds, ...chosen]),
+                                );
+                                brandsForm.setFieldsValue({ brandIds: merged });
+                            }}
                         />
                     </Form.Item>
                     <Form.Item style={{ marginBottom: 0 }}>

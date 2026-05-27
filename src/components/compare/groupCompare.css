@@ -86,6 +86,12 @@
     align-items: center;
 }
 
+.group-compare-filters-actions {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--app-gray-200);
+}
+
 .group-compare-brands {
     display: flex;
     flex-wrap: wrap;

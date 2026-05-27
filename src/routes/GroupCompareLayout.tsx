@@ -1,6 +1,6 @@
 /** Экран /compare/group — фильтры для подбора автомобилей. */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, ConfigProvider, Flex, Table, Typography } from 'antd';
+import { ConfigProvider, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ruRU from 'antd/locale/ru_RU';
 import GroupCompareFiltersPanel from '../components/compare/GroupCompareFiltersPanel';
@@ -37,14 +37,14 @@ const GroupCompareLayout = () => {
                 title: 'Марка',
                 key: 'brand',
                 width: 140,
-                render: () => '—',
+                render: (_, r) => r.generation?.model?.brand?.name ?? '—',
                 fixed: 'left',
             },
             {
                 title: 'Модель',
                 key: 'model',
                 width: 160,
-                render: () => '—',
+                render: (_, r) => r.generation?.model?.name ?? '—',
                 fixed: 'left',
             },
             {
@@ -109,13 +109,13 @@ const GroupCompareLayout = () => {
                 title: 'Производство',
                 key: 'country',
                 width: 160,
-                render: () => '—',
+                render: (_, r) => r.country?.name ?? '—',
             },
             {
                 title: 'Тип кузова',
                 key: 'bodyType',
                 width: 140,
-                render: () => '—',
+                render: (_, r) => r.bodyType?.name ?? '—',
             },
             {
                 title: 'Гарантия',
@@ -145,13 +145,12 @@ const GroupCompareLayout = () => {
             <Typography.Title level={3} style={{ margin: 0, textAlign: 'center' }}>
                 Групповое сравнение
             </Typography.Title>
-            <GroupCompareFiltersPanel value={draftFilters} onChange={setDraftFilters} />
-            <Flex gap={12} wrap="wrap" style={{ marginTop: 12 }}>
-                <Button type="primary" onClick={onApply}>
-                    Применить фильтр
-                </Button>
-                <Button onClick={onReset}>Сбросить</Button>
-            </Flex>
+            <GroupCompareFiltersPanel
+                value={draftFilters}
+                onChange={setDraftFilters}
+                onApply={onApply}
+                onReset={onReset}
+            />
 
             <div style={{ marginTop: 18 }}>
                 <ConfigProvider locale={ruRU}>

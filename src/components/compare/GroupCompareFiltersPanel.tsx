@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {App, Checkbox, Divider, Flex, InputNumber, Spin, Typography} from 'antd';
+import { App, Button, Checkbox, Divider, Flex, InputNumber, Spin, Typography } from 'antd';
 import type { GroupCompareFilters } from '../../types/groupCompare';
 import { useBrandsStore } from '../../stores/brandsStore';
 import { useBodyTypesStore } from '../../stores/bodyTypesStore';
@@ -10,6 +10,8 @@ import './groupCompare.css';
 interface Props {
     value: GroupCompareFilters;
     onChange: (next: GroupCompareFilters) => void;
+    onApply: () => void;
+    onReset: () => void;
 }
 
 function toggleId(ids: string[], id: string, checked: boolean): string[] {
@@ -88,7 +90,7 @@ async function fetchModelsByBrand(brandId: string): Promise<Model[]> {
     return out;
 }
 
-const GroupCompareFiltersPanel: React.FC<Props> = ({ value, onChange }) => {
+const GroupCompareFiltersPanel: React.FC<Props> = ({ value, onChange, onApply, onReset }) => {
     const { message } = App.useApp();
     const brands = useBrandsStore((s) => s.brands);
     const brandsLoading = useBrandsStore((s) => s.loading);
@@ -175,8 +177,8 @@ const GroupCompareFiltersPanel: React.FC<Props> = ({ value, onChange }) => {
         onChange({ ...value, modelIds: toggleId(value.modelIds, id, checked) });
     };
 
-    const toggleBodyType = (id: string, checked: boolean) => {
-        onChange({ ...value, bodyTypeIds: toggleId(value.bodyTypeIds, id, checked) });
+    const setBodyTypeIds = (ids: string[]) => {
+        onChange({ ...value, bodyTypeIds: ids });
     };
 
     return (
@@ -246,15 +248,16 @@ const GroupCompareFiltersPanel: React.FC<Props> = ({ value, onChange }) => {
                         <Spin size="small" />
                     ) : (
                         <div className="group-compare-inline-list">
-                            {sortedBodyTypes.map((bt) => (
-                                <Checkbox
-                                    key={bt.id}
-                                    checked={value.bodyTypeIds.includes(bt.id)}
-                                    onChange={(e) => toggleBodyType(bt.id, e.target.checked)}
-                                >
-                                    {bt.name}
-                                </Checkbox>
-                            ))}
+                            <Checkbox.Group
+                                value={value.bodyTypeIds}
+                                onChange={(checked) =>
+                                    setBodyTypeIds(checked.map((v) => String(v)))
+                                }
+                                options={sortedBodyTypes.map((bt) => ({
+                                    label: bt.name,
+                                    value: bt.id,
+                                }))}
+                            />
                         </div>
                     )}
                 </div>
@@ -308,6 +311,15 @@ const GroupCompareFiltersPanel: React.FC<Props> = ({ value, onChange }) => {
                         />
                     </div>
                 </div>
+            </div>
+
+            <div className="group-compare-filters-actions">
+                <Flex gap={12} justify="flex-end" wrap="wrap">
+                    <Button type="primary" onClick={onApply}>
+                        Применить фильтр
+                    </Button>
+                    <Button onClick={onReset}>Сбросить</Button>
+                </Flex>
             </div>
         </div>
     );
