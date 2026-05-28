@@ -231,7 +231,7 @@ const GenerationsLayout = () => {
                 <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
                     {header}
                     <Space wrap>
-                        <Button onClick={() => setCloneOpen(true)}>Клонировать</Button>
+                        <Button disabled={true} onClick={() => setCloneOpen(true)}>Клонировать</Button>
                         <Button
                             type="primary"
                             icon={<PlusOutlined />}
